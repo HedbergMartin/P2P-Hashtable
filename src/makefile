@@ -1,16 +1,19 @@
 CC=gcc
 
-CFLAGS= -std=gnu11 -pedantic -Wall -Wextra -Werror -Wmissing-declarations -Wmissing-prototypes -Werror-implicit-function-declaration -Wreturn-type -Wparentheses -Wunused -Wold-style-definition -Wundef -Wshadow -Wstrict-prototypes -Wswitch-default -Wunreachable-code
+CFLAGS= -std=gnu11 -pedantic -Wall #-Wextra -Werror -Wmissing-declarations -Wmissing-prototypes -Werror-implicit-function-declaration -Wreturn-type -Wparentheses -Wunused -Wold-style-definition -Wundef -Wshadow -Wstrict-prototypes -Wswitch-default -Wunreachable-code
 
-HEADERS = webserver.h
-WEBSERVER_SRC=webserver.c
+NODE_SRC=node/node.c
+PDU_PARSER_SRC=pdu/pdu_parser.c
 
-all: webserver
+all: p2p
 
-webserver: webserver.o
+p2p: node.o pdu_parser.o
 	$(CC) $(CFLAGS) -o $@ $^
 
-webserver.o: $(WEBSERVER_SRC) $(HEADERS)
+node.o: $(NODE_SRC) $(node/node.h)
+	$(CC) $(CFLAGS) -c $<
+
+pdu_parser.o: $(PDU_PARSER_SRC) $(pdu/headers/*.h)
 	$(CC) $(CFLAGS) -c $<
 
 valgrind:
