@@ -10,7 +10,7 @@ all: p2p
 p2p: node.o pdu_parser.o
 	$(CC) $(CFLAGS) -o $@ $^
 
-node.o: $(NODE_SRC) $(node/node.h)
+node.o: $(NODE_SRC) $(node/node.h pdu/headers/*.h)
 	$(CC) $(CFLAGS) -c $<
 
 pdu_parser.o: $(PDU_PARSER_SRC) $(pdu/headers/*.h)

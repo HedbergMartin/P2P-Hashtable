@@ -1,14 +1,16 @@
 #include <unistd.h>
 #include <stdio.h>
+#include <stdbool.h>
 
 #include "headers/pdu_parser.h"
 #include "headers/pdu.h"
 
 
-void parseInStream(int fd) {
-    uint8_t buffer[BUFFER_SIZE] = {0};
-    int pos = 0;
-    size_t len = read(fd, buffer, BUFFER_SIZE);
+void parseInStream(int fd, uint8_t* buffer, size_t* buffLen) {
+    // uint8_t buffer[BUFFER_SIZE] = {0};
+    // size_t buffLen = 0;
+
+    size_t len = 4;// read(fd, buffer, BUFFER_SIZE);
     if (len < 0) {
         perror("Failed to read");
         return;
@@ -16,38 +18,68 @@ void parseInStream(int fd) {
         // TODO: decide what to do
         return;
     }
+    (*buffLen) += len;
 
-    uint8_t type = buffer[0];
+    bool readAgain = true;
+    while (readAgain) {
+        printf("Len = %lu\n", *buffLen);
+        if ((*buffLen) > 0) {
+            readAgain = PDUParse(buffer, buffLen);
+        } else {
+            readAgain = false;
+        }
+    }
 
 }
 
-void PDUParse(uint8_t type, uint8_t* buffer, int* pos) {
-    switch(type) {
-        case NET_ALIVE:
-            struct NET_ALIVE_PDU pdu; 
-            int readBytes = PDUparseNetAlive(buffer, &pdu);
-            // useNetAlivePdu(p);
+bool PDUParse(uint8_t* buffer, size_t* buffLen) {
+    bool read;
+    switch(buffer[0]) {
+        case NET_ALIVE: ; //Apperantly needed???
+            struct NET_ALIVE_PDU pdu;
+            read = readToPDUStruct(buffer, buffLen, &pdu, sizeof(pdu));
+            printf("Type: %d, Port: %d\n", pdu.type, pdu.port);
             break;
         case NET_GET_NODE:
             break;
         default:
             break;
     }
+
+    return read;
 }
 
-struct NET_GET_NODE_RESPONSE_PDU* PDUparseNetGetNodeResponse() {
-    return NULL;
+bool readToPDUStruct(uint8_t* buffer, size_t* buffLen, void* pdu, size_t size) {
+    if (*buffLen >= size) {
+        memcpy(pdu, buffer, size);
+        *buffLen -= size;
+        memcpy(buffer, &buffer[size], *buffLen);
+        return true;
+    }
+
+    return false;
 }
 
-int PDUparseNetAlive(uint8_t* buffer, NET_ALIVE_PDU* pdu) {
-    int readBytes = 0;
-    short pad = 1;
-    pdu->type = buffer[readBytes += 1];
-    readBytes += pad;
-    pdu->port = buffer[readBytes += 2];
+// char* readBuffer(uint8_t* buffer, int* pos, int bytesToRead) {
+//     char* text = malloc(bytesToRead*sizeof(char));
+//     memcpy(text, &buffer[*pos], bytesToRead);
+//     *pos += bytesToRead;
+//     return text;
+// }
+
+// struct NET_GET_NODE_RESPONSE_PDU* PDUparseNetGetNodeResponse() {
+//     return NULL;
+// }
+
+// int PDUparseNetAlive(uint8_t* buffer, struct NET_ALIVE_PDU* pdu) {
+//     int readBytes = 0;
+//     short pad = 1;
+//     pdu->type = buffer[readBytes += 1];
+//     readBytes += pad;
+//     pdu->port = buffer[readBytes += 2];
     
-    return readBytes;
-}
+//     return readBytes;
+// }
 
 // struct NET_CLOSE_CONNECTION_PDU *
 // 
