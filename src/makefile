@@ -18,3 +18,6 @@ pdu_parser.o: $(PDU_PARSER_SRC) $(pdu/headers/*.h)
 
 valgrind:
 	valgrind --leak-check=full --show-reachable=yes --track-origins=yes ./webserver 4021 serverstuff
+
+clean:
+	rm -f p2p *.o core

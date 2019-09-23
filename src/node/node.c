@@ -13,8 +13,8 @@
 
 int main(int argc, char** argv) {
 
-    
-    uint8_t a[10000] = {0, 0, 144, 1, 0, 0, 143, 0};
+    printf("%lu", ntohs(400));
+    uint8_t a[10000] = {0, 0, 1, 145, 0, 0, 143, 0};
     size_t len = 4;
     parseInStream(0, a, &len);
 

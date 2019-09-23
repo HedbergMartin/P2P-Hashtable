@@ -1,6 +1,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <arpa/inet.h>
 
 #include "headers/pdu_parser.h"
 #include "headers/pdu.h"
@@ -35,10 +36,8 @@ void parseInStream(int fd, uint8_t* buffer, size_t* buffLen) {
 bool PDUParse(uint8_t* buffer, size_t* buffLen) {
     bool read;
     switch(buffer[0]) {
-        case NET_ALIVE: ; //Apperantly needed???
-            struct NET_ALIVE_PDU pdu;
-            read = readToPDUStruct(buffer, buffLen, &pdu, sizeof(pdu));
-            printf("Type: %d, Port: %d\n", pdu.type, pdu.port);
+        case NET_ALIVE:
+            read = PDUparseNetAlive(buffer, buffLen);
             break;
         case NET_GET_NODE:
             break;
@@ -60,6 +59,15 @@ bool readToPDUStruct(uint8_t* buffer, size_t* buffLen, void* pdu, size_t size) {
     return false;
 }
 
+bool PDUparseNetAlive(uint8_t* buffer, size_t* buffLen) {
+    struct NET_ALIVE_PDU pdu;
+    bool read = readToPDUStruct(buffer, buffLen, &pdu, sizeof(pdu));
+    printf("Type: %d, Port: %d\n", pdu.type, pdu.port);
+    pdu.port = ntohs(pdu.port);
+    printf("Type: %d, Port: %d\n", pdu.type, pdu.port);
+    return read;
+}
+
 // char* readBuffer(uint8_t* buffer, int* pos, int bytesToRead) {
 //     char* text = malloc(bytesToRead*sizeof(char));
 //     memcpy(text, &buffer[*pos], bytesToRead);
@@ -69,16 +77,6 @@ bool readToPDUStruct(uint8_t* buffer, size_t* buffLen, void* pdu, size_t size) {
 
 // struct NET_GET_NODE_RESPONSE_PDU* PDUparseNetGetNodeResponse() {
 //     return NULL;
-// }
-
-// int PDUparseNetAlive(uint8_t* buffer, struct NET_ALIVE_PDU* pdu) {
-//     int readBytes = 0;
-//     short pad = 1;
-//     pdu->type = buffer[readBytes += 1];
-//     readBytes += pad;
-//     pdu->port = buffer[readBytes += 2];
-    
-//     return readBytes;
 // }
 
 // struct NET_CLOSE_CONNECTION_PDU *
