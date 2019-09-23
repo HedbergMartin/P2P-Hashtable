@@ -37,7 +37,7 @@ bool PDUParse(uint8_t* buffer, size_t* buffLen) {
         case NET_ALIVE:
             read = PDUparseNetAlive(buffer, buffLen);
             break;
-        case STUN_RESPONSE_PDU:
+        case STUN_RESPONSE:
             read = PDUparseStunResponse(buffer, buffLen);
             break;
         default:

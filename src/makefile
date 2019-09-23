@@ -2,7 +2,7 @@ CC=gcc
 
 CFLAGS= -std=gnu11 -pedantic -Wall #-Wextra -Werror -Wmissing-declarations -Wmissing-prototypes -Werror-implicit-function-declaration -Wreturn-type -Wparentheses -Wunused -Wold-style-definition -Wundef -Wshadow -Wstrict-prototypes -Wswitch-default -Wunreachable-code
 
-NODE_SRC=node/node.c
+NODE_SRC=node_src/node.c
 PDU_PARSER_SRC=pdu/pdu_parser.c
 
 all: node

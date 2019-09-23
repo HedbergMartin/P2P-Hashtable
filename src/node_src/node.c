@@ -49,7 +49,7 @@ void runNode(struct NODE_INFO *node) {
         if (pollret > 0) {
 
             for (int i = 0; i < 4; i++) {
-                if (node->fds[i] & REVENTS) {
+                if (node->fds[i].revents & POLLIN) {
                     switch (i) {
                         case STDIN_FD:
                             break;
