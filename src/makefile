@@ -5,9 +5,9 @@ CFLAGS= -std=gnu11 -pedantic -Wall #-Wextra -Werror -Wmissing-declarations -Wmis
 NODE_SRC=node/node.c
 PDU_PARSER_SRC=pdu/pdu_parser.c
 
-all: p2p
+all: node
 
-p2p: node.o pdu_parser.o
+node: node.o pdu_parser.o
 	$(CC) $(CFLAGS) -o $@ $^
 
 node.o: $(NODE_SRC) $(node/node.h pdu/headers/*.h)
@@ -20,4 +20,4 @@ valgrind:
 	valgrind --leak-check=full --show-reachable=yes --track-origins=yes ./webserver 4021 serverstuff
 
 clean:
-	rm -f p2p *.o core
+	rm -f node *.o core

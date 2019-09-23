@@ -17,11 +17,11 @@
 //     uint16_t port;
 // };
 
-struct CLIENT_INFO {
+struct NODE_INFO {
     uint16_t trackerPort;
-    uint16_t clientPort;
+    uint16_t nodePort;
     const char *trackerAddress;
-    const char *clientAddress;
+    const char *nodeAddress;
     struct pollfd fds[6];
 };
 
@@ -31,16 +31,49 @@ int main(const int argc, const char** argv) {
     // uint8_t a[10000] = {0, 0, 1, 145, 0, 0, 143, 0};
     // size_t len = 4;
     // parseInStream(0, a, &len);
-    struct CLIENT_INFO client;
+    struct NODE_INFO node;
 
-    if (!initClient(&client, argc, argv)) {
+    if (!initNode(&node, argc, argv)) {
         return -1;
     }
 
     return 0;
 }
 
-int initClient(struct CLIENT_INFO *client, const int argc, const char **argv) {
+void runNode(struct NODE_INFO *node) {
+    uint8_t buffer[BUFFER_SIZE] = {0}; //BUFFER_SIZE declared in pdu_parser.h
+    size_t buffLen = 0;
+
+    while (1) {
+        int pollret = poll(node->fds, 4, 10000);
+        if (pollret > 0) {
+
+            for (int i = 0; i < 4; i++) {
+                if (node->fds[i] & REVENTS) {
+                    switch (i) {
+                        case STDIN_FD:
+                            break;
+                        // case TRACKER_FD:
+                        //     break;
+                        // case AGENT_FD:
+                        //     break;
+                        // case TCP_ACCEPT_FD:
+                        //     break;
+                        default:
+                            parseInStream(node->fds[i].fd, buffer, &buffLen);
+                            break;
+                    }
+                }
+            }
+
+        } else if (pollret < 0) {
+            perror("Poll error");
+            //TODO figure out poll error handling.
+        }
+    }
+}
+
+int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
     
     if (argc != 3) {
         fprintf(stderr, "Invalid arguments.");
@@ -48,34 +81,34 @@ int initClient(struct CLIENT_INFO *client, const int argc, const char **argv) {
     }
 
     char *rest;
-    client->trackerAddress = argv[1];
-    client->trackerPort = strtol(argv[2], &rest, 10);
-    client->clientPort = 7000;
+    node->trackerAddress = argv[1];
+    node->trackerPort = strtol(argv[2], &rest, 10);
+    node->nodePort = 7000;
 
     if (strlen(rest) != 0) {
         printf("Port argument must be a number");
         return -1;
     }
     // SOCK_DGRAM
-    client->fds[STDIN_FD].fd = STDIN_FILENO;
-    client->fds[STDIN_FD].events = POLLIN;
+    node->fds[STDIN_FD].fd = STDIN_FILENO;
+    node->fds[STDIN_FD].events = POLLIN;
 
-    client->fds[TRACKER_FD].fd = createSocket(client->clientPort, SOCK_DGRAM);
-    client->fds[TRACKER_FD].events = POLLIN;
+    node->fds[TRACKER_FD].fd = createSocket(node->nodePort, SOCK_DGRAM);
+    node->fds[TRACKER_FD].events = POLLIN;
 
-    client->fds[AGENT_FD].fd = createSocket(8000, SOCK_DGRAM); // TODO: determine port
-    client->fds[AGENT_FD].events = POLLIN;
+    node->fds[AGENT_FD].fd = createSocket(8000, SOCK_DGRAM); // TODO: determine port
+    node->fds[AGENT_FD].events = POLLIN;
 
-    client->fds[TCP_ACCEPT_FD].fd = createSocket(client->clientPort, SOCK_STREAM);
-    client->fds[TCP_ACCEPT_FD].events = POLLIN;
+    node->fds[TCP_ACCEPT_FD].fd = createSocket(node->nodePort, SOCK_STREAM);
+    node->fds[TCP_ACCEPT_FD].events = POLLIN;
 
     for (int i = TRACKER_FD; i < TCP_ACCEPT_FD; i++) {
-        if (client->fds[i].fd < 0) {
+        if (node->fds[i].fd < 0) {
             return -1;
         }
     }
 
-    if (listen(client->fds[TCP_ACCEPT_FD].fd, 100) < 0) { // TODO: Listen queue len?
+    if (listen(node->fds[TCP_ACCEPT_FD].fd, 100) < 0) { // TODO: Listen queue len?
         perror("Listen for connection");
         return -1;
     }

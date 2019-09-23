@@ -8,10 +8,8 @@
 
 
 void parseInStream(int fd, uint8_t* buffer, size_t* buffLen) {
-    // uint8_t buffer[BUFFER_SIZE] = {0};
-    // size_t buffLen = 0;
 
-    size_t len = 4;// read(fd, buffer, BUFFER_SIZE);
+    size_t len = read(fd, buffer, BUFFER_SIZE);
     if (len < 0) {
         perror("Failed to read");
         return;
@@ -39,7 +37,8 @@ bool PDUParse(uint8_t* buffer, size_t* buffLen) {
         case NET_ALIVE:
             read = PDUparseNetAlive(buffer, buffLen);
             break;
-        case NET_GET_NODE:
+        case STUN_RESPONSE_PDU:
+            read = PDUparseStunResponse(buffer, buffLen);
             break;
         default:
             break;
@@ -65,6 +64,13 @@ bool PDUparseNetAlive(uint8_t* buffer, size_t* buffLen) {
     printf("Type: %d, Port: %d\n", pdu.type, pdu.port);
     pdu.port = ntohs(pdu.port);
     printf("Type: %d, Port: %d\n", pdu.type, pdu.port);
+    return read;
+}
+
+bool PDUparseStunResponse(uint8_t* buffer, size_t* buffLen) {
+    struct STUN_RESPONSE_PDU pdu;
+    bool read = readToPDUStruct(buffer, buffLen, &pdu, sizeof(pdu));
+    printf("%s\n\n", pdu.address);
     return read;
 }
 
