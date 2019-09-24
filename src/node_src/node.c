@@ -6,6 +6,7 @@
 #include <poll.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+// #include <netinet/in.h>
 
 #include "node.h"
 #include "../pdu/headers/pdu_parser.h"
@@ -43,6 +44,8 @@ int main(const int argc, const char** argv) {
 void runNode(struct NODE_INFO *node) {
     uint8_t buffer[BUFFER_SIZE] = {0}; //BUFFER_SIZE declared in pdu_parser.h
     size_t buffLen = 0;
+
+    sendStunLookup(node->nodePort, TRACKER_FD, node);
 
     while (1) {
         int pollret = poll(node->fds, 4, 10000);
@@ -142,6 +145,18 @@ void sendUDP(int socket, struct sockaddr_in* to, uint8_t* msg, uint32_t msg_len)
     do {
         sent += sendto(socket, msg + sent, msg_len - sent, 0, (struct sockaddr*)to, sizeof(*to));
     } while(sent != msg_len);
+}
+
+void sendStunLookup(uint16_t port, int fd, struct NODE_INFO* node) {
+    struct STUN_LOOKUP_PDU pdu;
+    pdu.type = STUN_LOOKUP;
+    pdu.port = htons(port);
+    struct sockaddr_in to;
+    to.sin_family = AF_INET;
+    to.sin_port = htons(node->trackerPort);
+    inet_aton(node->trackerAddress, &(to.sin_addr));
+
+    sentUDP(fd, &to, (uint8_t*)&pdu, sizeof(struct STUN_LOOKUP_PDU));
 }
 
 
