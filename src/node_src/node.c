@@ -38,6 +38,8 @@ int main(const int argc, const char** argv) {
         return -1;
     }
 
+    runNode(&node);
+
     return 0;
 }
 
@@ -45,8 +47,8 @@ void runNode(struct NODE_INFO *node) {
     uint8_t buffer[BUFFER_SIZE] = {0}; //BUFFER_SIZE declared in pdu_parser.h
     size_t buffLen = 0;
 
-    sendStunLookup(node->nodePort, TRACKER_FD, node);
-
+    sendStunLookup(node->nodePort, node->fds[TRACKER_FD].fd, node);
+    
     while (1) {
         int pollret = poll(node->fds, 4, 10000);
         if (pollret > 0) {
@@ -143,6 +145,7 @@ int createSocket(int port, int type) {
 void sendUDP(int socket, struct sockaddr_in* to, uint8_t* msg, uint32_t msg_len) {
     uint32_t sent = 0;
     do {
+        printf("%d\n", sent);
         sent += sendto(socket, msg + sent, msg_len - sent, 0, (struct sockaddr*)to, sizeof(*to));
     } while(sent != msg_len);
 }
@@ -156,7 +159,7 @@ void sendStunLookup(uint16_t port, int fd, struct NODE_INFO* node) {
     to.sin_port = htons(node->trackerPort);
     inet_aton(node->trackerAddress, &(to.sin_addr));
 
-    sentUDP(fd, &to, (uint8_t*)&pdu, sizeof(struct STUN_LOOKUP_PDU));
+    sendUDP(fd, &to, (uint8_t*)&pdu, sizeof(struct STUN_LOOKUP_PDU));
 }
 
 
