@@ -23,6 +23,8 @@
 #define STUN_LOOKUP 200
 #define STUN_RESPONSE 201
 
+#define MAX_PDU_SIZE 1024
+
 #ifndef PDU_DEF
 #define PDU_DEF
 

@@ -6,11 +6,13 @@
 #include <poll.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
+#include <stdbool.h>
 // #include <netinet/in.h>
 
-#include "node.h"
-#include "../pdu/headers/pdu_parser.h"
-#include "../pdu/headers/pdu.h"
+#include "headers/node.h"
+#include "headers/pdu_parser.h"
+#include "headers/pdu_sender.h"
+#include "headers/pdu.h"
 
 // struct NET_ALIVE_PDU {
 //     uint8_t type;
@@ -19,10 +21,12 @@
 // };
 
 struct NODE_INFO {
+    uint8_t buffer[BUFFER_SIZE];
+    size_t buffLen;
     uint16_t trackerPort;
     uint16_t nodePort;
-    const char *trackerAddress;
-    const char *nodeAddress;
+    char trackerAddress[ADDRESS_LENGTH];
+    char nodeAddress[ADDRESS_LENGTH];
     struct pollfd fds[6];
 };
 
@@ -44,10 +48,8 @@ int main(const int argc, const char** argv) {
 }
 
 void runNode(struct NODE_INFO *node) {
-    uint8_t buffer[BUFFER_SIZE] = {0}; //BUFFER_SIZE declared in pdu_parser.h
-    size_t buffLen = 0;
 
-    sendStunLookup(node->nodePort, node->fds[TRACKER_FD].fd, node);
+    sendStunLookup(node->nodePort, node->fds[TRACKER_FD].fd, node->trackerAddress, node->trackerPort);
     
     while (1) {
         int pollret = poll(node->fds, 4, 10000);
@@ -65,7 +67,7 @@ void runNode(struct NODE_INFO *node) {
                         // case TCP_ACCEPT_FD:
                         //     break;
                         default:
-                            parseInStream(node->fds[i].fd, buffer, &buffLen);
+                            parseInStream(node->fds[i].fd, node);
                             break;
                     }
                 }
@@ -78,15 +80,67 @@ void runNode(struct NODE_INFO *node) {
     }
 }
 
+void parseInStream(int fd, struct NODE_INFO* node) {
+
+    size_t len = read(fd, node->buffer, BUFFER_SIZE);
+    if (len < 0) {
+        perror("Failed to read");
+        return;
+    } else if (len == 0) {
+        // TODO: decide what to do
+        return;
+    }
+    node->buffLen += len;
+
+    bool readAgain = true;
+    while (readAgain) {
+        // printf("Len = %lu\n", *buffLen);
+        if (node->buffLen > 0) {
+            readAgain = handlePDU(node);
+        } else {
+            readAgain = false;
+        }
+    }
+}
+
+bool handlePDU (struct NODE_INFO* node) {
+    bool read = 0;
+    switch(node->buffer[0]) {
+        case NET_ALIVE: ;
+            struct NET_ALIVE_PDU pdu;
+            read = PDUparseNetAlive(node->buffer, &(node->buffLen), &pdu);
+            break;
+        case STUN_RESPONSE:
+            read = handleStunResponse(node); 
+            break;
+        default:
+            break;
+    }
+
+    return read;
+}
+
+bool handleStunResponse(struct NODE_INFO* node) {
+    struct STUN_RESPONSE_PDU pdu;
+    bool read = PDUparseStunResponse(node->buffer, &(node->buffLen), &pdu);
+    if (read) {
+        memcpy(node->nodeAddress, pdu.address, ADDRESS_LENGTH);
+        sendNetGetNode(node->nodePort, node->fds[TRACKER_FD].fd, node->trackerAddress, node->trackerPort);
+    }
+    return read;
+}
+
 int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
     
     if (argc != 3) {
         fprintf(stderr, "Invalid arguments.");
         return -1;
     }
+    
+    node->buffLen = 0;
 
     char *rest;
-    node->trackerAddress = argv[1];
+    memcpy(node->trackerAddress, argv[1], ADDRESS_LENGTH);
     node->trackerPort = strtol(argv[2], &rest, 10);
     node->nodePort = 7000;
 
@@ -94,7 +148,6 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
         printf("Port argument must be a number");
         return -1;
     }
-    // SOCK_DGRAM
     node->fds[STDIN_FD].fd = STDIN_FILENO;
     node->fds[STDIN_FD].events = POLLIN;
 
@@ -141,38 +194,3 @@ int createSocket(int port, int type) {
 
     return insocket;
 }
-
-void sendUDP(int socket, struct sockaddr_in* to, uint8_t* msg, uint32_t msg_len) {
-    uint32_t sent = 0;
-    do {
-        printf("%d\n", sent);
-        sent += sendto(socket, msg + sent, msg_len - sent, 0, (struct sockaddr*)to, sizeof(*to));
-    } while(sent != msg_len);
-}
-
-void sendStunLookup(uint16_t port, int fd, struct NODE_INFO* node) {
-    struct STUN_LOOKUP_PDU pdu;
-    pdu.type = STUN_LOOKUP;
-    pdu.port = htons(port);
-    struct sockaddr_in to;
-    to.sin_family = AF_INET;
-    to.sin_port = htons(node->trackerPort);
-    inet_aton(node->trackerAddress, &(to.sin_addr));
-
-    sendUDP(fd, &to, (uint8_t*)&pdu, sizeof(struct STUN_LOOKUP_PDU));
-}
-
-
-
-    // FROM MAIN
-    // struct NET_ALIVE_PDU* pdu = malloc(sizeof(struct NET_ALIVE_PDU));
-    // // uint8_t* type = malloc(sizeof(uint8_t));
-    // // uint16_t* port = malloc(sizeof(uint16_t));
-
-
-    // memcpy(pdu, a, 4);
-    // // memcpy(port, a+2, 2);
-
-
-    // printf("%d", sizeof(struct NET_ALIVE_PDU));
-    //printf("HATHSENU\n");

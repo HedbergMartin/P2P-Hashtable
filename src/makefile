@@ -2,18 +2,23 @@ CC=gcc
 
 CFLAGS= -std=gnu11 -pedantic -Wall #-Wextra -Werror -Wmissing-declarations -Wmissing-prototypes -Werror-implicit-function-declaration -Wreturn-type -Wparentheses -Wunused -Wold-style-definition -Wundef -Wshadow -Wstrict-prototypes -Wswitch-default -Wunreachable-code
 
-NODE_SRC=node_src/node.c
-PDU_PARSER_SRC=pdu/pdu_parser.c
+NODE_SRC=node.c
+PDU_PARSER_SRC=pdu_parser.c
+PDU_SENDER_SRC=pdu_sender.c
+HEADERS=headers/*.h
 
 all: node
 
-node: node.o pdu_parser.o
+node: node.o pdu_parser.o pdu_sender.o
 	$(CC) $(CFLAGS) -o $@ $^
 
-node.o: $(NODE_SRC) $(node/node.h pdu/headers/*.h)
+node.o: $(NODE_SRC) $(HEADERS)
 	$(CC) $(CFLAGS) -c $<
 
-pdu_parser.o: $(PDU_PARSER_SRC) $(pdu/headers/*.h)
+pdu_sender.o: $(PDU_SENDER_SRC) $(HEADERS)
+	$(CC) $(CFLAGS) -c $<
+
+pdu_parser.o: $(PDU_PARSER_SRC) $(HEADERS)
 	$(CC) $(CFLAGS) -c $<
 
 valgrind:

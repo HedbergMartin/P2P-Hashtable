@@ -12,10 +12,11 @@ typedef struct NODE_INFO NODE_INFO;
 
 int createSocket(int port, int type);
 
-void sendStunLookup(uint16_t port, int fd, struct NODE_INFO* node);
-void sendUDP(int socket, struct sockaddr_in* to, uint8_t* msg, uint32_t msg_len);
-
 int initNode(struct NODE_INFO *node, const int argc, const char **argv);
 void runNode(struct NODE_INFO *node);
+void parseInStream(int fd, struct NODE_INFO* node);
+bool handlePDU (struct NODE_INFO* node);
+bool handleStunResponse(struct NODE_INFO* node);
+
 
 #endif
