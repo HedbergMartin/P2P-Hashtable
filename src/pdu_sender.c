@@ -34,7 +34,7 @@ void sendStunLookup(uint16_t port, int fd, char* toAddress, uint16_t toPort) {
     pdu.type = STUN_LOOKUP;
     pdu.port = htons(port);
 
-    sendUDP(fd, toAddress, toPort, (uint8_t*)&pdu, sizeof(struct STUN_LOOKUP_PDU));
+    sendUDP(fd, toAddress, toPort, (uint8_t*)&pdu, sizeof(pdu));
 }
 
 void sendNetGetNode(uint16_t port, int fd, char* toAddress, uint16_t toPort) {
@@ -42,7 +42,7 @@ void sendNetGetNode(uint16_t port, int fd, char* toAddress, uint16_t toPort) {
     pdu.type = NET_GET_NODE;
     pdu.port = htons(port);
 
-    sendUDP(fd, toAddress, toPort, (uint8_t*)&pdu, sizeof(struct NET_GET_NODE_PDU));
+    sendUDP(fd, toAddress, toPort, (uint8_t*)&pdu, sizeof(pdu));
 }
 
 void sendNetAlive(uint16_t port, int fd, char* toAddress, uint16_t toPort) {
@@ -50,7 +50,7 @@ void sendNetAlive(uint16_t port, int fd, char* toAddress, uint16_t toPort) {
     pdu.type = NET_ALIVE;
     pdu.port = htons(port);
 
-    sendUDP(fd, toAddress, toPort, (uint8_t*)&pdu, sizeof(struct NET_ALIVE_PDU));
+    sendUDP(fd, toAddress, toPort, (uint8_t*)&pdu, sizeof(pdu));
 }
 
 void sendNetJoin(char* srcAddr, uint16_t srcPort, int fd, char* toAddress, uint16_t toPort) {
@@ -62,10 +62,22 @@ void sendNetJoin(char* srcAddr, uint16_t srcPort, int fd, char* toAddress, uint1
     memset(pdu.max_address, 0, ADDRESS_LENGTH);
     pdu.max_port = 0;
     
-    sendUDP(fd, toAddress, toPort, (uint8_t*)&pdu, sizeof(struct NET_JOIN_PDU));    
+    sendUDP(fd, toAddress, toPort, (uint8_t*)&pdu, sizeof(pdu));    
 }
 
-void sendNetJoinResp(char* nextAddr, uint16_t nextPort, int fd) {
+void forwardNetJoin(int fd, struct NET_JOIN_PDU pdu, uint8_t span, char* addr, uint16_t port) {
+    pdu.src_port = htons(pdu.src_port);
+    pdu.max_port = htons(pdu.max_port);
+    if (pdu.max_span < span) {
+        memcpy(pdu.max_address, addr, ADDRESS_LENGTH);
+        pdu.max_port = htons(port);
+        pdu.max_span = span;
+    }
+
+    write(fd, (uint8_t*)&pdu, sizeof(pdu));
+}
+
+void sendNetJoinResp(int fd, char* nextAddr, uint16_t nextPort) {
     struct NET_JOIN_RESPONSE_PDU pdu;
     pdu.type = NET_JOIN_RESPONSE;
     memcpy(pdu.next_address, nextAddr, ADDRESS_LENGTH);
@@ -74,6 +86,6 @@ void sendNetJoinResp(char* nextAddr, uint16_t nextPort, int fd) {
     pdu.range_end = 0;
     
     // send(fd, (uint8_t*)&pdu, sizeof(struct NET_JOIN_RESPONSE_PDU), 0);
-    write(fd, (uint8_t*)&pdu, sizeof(struct NET_JOIN_RESPONSE_PDU));
+    write(fd, (uint8_t*)&pdu, sizeof(pdu));
     //sendUDP(fd, toAddress, toPort, (uint8_t*)&pdu, sizeof(struct NET_JOIN_PDU));    
 }

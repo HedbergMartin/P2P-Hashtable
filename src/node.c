@@ -162,7 +162,7 @@ bool handleNetGetNodeResponse(struct NODE_INFO* node) {
     struct NET_GET_NODE_RESPONSE_PDU pdu;
     bool read = PDUparseNetGetNodeResp(node->buffer, &(node->buffLen), &pdu);
     if (read) {
-        if (pdu.port != 0) {
+        if (pdu.port != 0) { //TODO eller address len?
             //Connect to predecesor
             sendNetJoin(node->nodeAddress, node->nodeAcceptPort, node->fds[TRACKER_FD].fd, pdu.address, pdu.port);
         } else {
@@ -180,6 +180,7 @@ bool handleNetJoinResponse(struct NODE_INFO* node) {
     if (read) {
         node->fds[TCP_SEND_FD].fd = connectToSocket(pdu.next_address, pdu.next_port);
         node->fds[TCP_SEND_FD].events = POLLOUT;
+        node->range = 100;
     }
     return read;
 }
@@ -188,18 +189,17 @@ bool handleNetJoin(struct NODE_INFO* node) {
     struct NET_JOIN_PDU pdu;
     bool read = PDUparseNetJoin(node->buffer, &(node->buffLen), &pdu);
     if (read) {
-        if (node->range == 255 || pdu.max_port == node->nodeUDPPort) {
+        printf("Node: %d Max: %d\n", node->nodeAcceptPort, pdu.max_port);
+        if (node->range == 255 || (strcmp(pdu.max_address, node->nodeAddress) == 0 && pdu.max_port == node->nodeAcceptPort)) {
             //Varvet runt yeeet
+            printf("mthuoethutneohtn\n");
                         
             node->fds[TCP_SEND_FD].fd = connectToSocket(pdu.src_address, pdu.src_port);
             node->fds[TCP_SEND_FD].events = POLLOUT;
-            sendNetJoinResp(node->nodeAddress, node->nodeAcceptPort, node->fds[TCP_SEND_FD].fd);
+            sendNetJoinResp(node->fds[TCP_SEND_FD].fd, node->nodeAddress, node->nodeAcceptPort);
+            node->range /= 2;
         } else {
-            if (pdu.max_span < node->range) {
-                memcpy(pdu.max_address, node->nodeAddress, ADDRESS_LENGTH);
-                pdu.max_port = node->nodeAcceptPort;
-            }
-            //TODO send via TCP to next node
+            forwardNetJoin(node->fds[TCP_SEND_FD].fd, pdu, node->range, node->nodeAddress, node->nodeAcceptPort);
         }
     }
     return read;
