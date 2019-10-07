@@ -19,15 +19,35 @@ bool readToPDUStruct(uint8_t* buffer, size_t* buffLen, void* pdu, size_t size) {
 
 bool PDUparseNetAlive(uint8_t* buffer, size_t* buffLen, struct NET_ALIVE_PDU* pdu) {
     //struct NET_ALIVE_PDU pdu;
-    bool read = readToPDUStruct(buffer, buffLen, &pdu, sizeof(*pdu));
+    bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
     // printf("Type: %d, Port: %d\n", pdu->type, pdu->port);
     pdu->port = ntohs(pdu->port);
     // printf("Type: %d, Port: %d\n", pdu->type, pdu->port);
     return read;
 }
 
-bool PDUparseStunResponse(uint8_t* buffer, size_t* buffLen, struct STUN_RESPONSE_PDU* pdu) {
+bool PDUparseNetGetNodeResp(uint8_t* buffer, size_t* buffLen, struct NET_GET_NODE_RESPONSE_PDU* pdu) {
     bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
+    if (read) {
+        pdu->port = ntohs(pdu->port);
+    }
+    return read;
+}
+
+bool PDUparseNetJoinResp(uint8_t* buffer, size_t* buffLen, struct NET_JOIN_RESPONSE_PDU* pdu) {
+    bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
+    if (read) {
+        pdu->next_port = ntohs(pdu->next_port);
+    }
+    return read;
+}
+
+bool PDUparseNetJoin(uint8_t* buffer, size_t* buffLen, struct NET_JOIN_PDU* pdu) {
+    bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
+    if (read) {
+        pdu->src_port = ntohs(pdu->src_port);
+        pdu->max_port = ntohs(pdu->max_port);
+    }
     return read;
 }
 

@@ -8,15 +8,26 @@
 #define TCP_SEND_FD 4
 #define TCP_RECEIVE_FD 5
 
+#define SERVER_SOCK 0
+#define CLIENT_SOCK 1
+
 typedef struct NODE_INFO NODE_INFO;
 
-int createSocket(int port, int type);
+int createSocket(char* address, int port, int commType, int sockType);
+int createServerSocket(int port, int commType);
+int connectToSocket(char* address, int port);
+uint16_t getSocketPort(int fd);
 
 int initNode(struct NODE_INFO *node, const int argc, const char **argv);
 void runNode(struct NODE_INFO *node);
 void parseInStream(int fd, struct NODE_INFO* node);
-bool handlePDU (struct NODE_INFO* node);
+bool handlePDU(struct NODE_INFO* node);
 bool handleStunResponse(struct NODE_INFO* node);
+bool handleNetGetNodeResponse(struct NODE_INFO* node);
+bool handleNetJoinResponse(struct NODE_INFO* node);
+bool handleNetJoin(struct NODE_INFO* node);
+void handleInstreams(struct NODE_INFO* node);
+void handle_stdin();
 
 
 #endif
