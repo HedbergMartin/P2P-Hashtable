@@ -5,11 +5,13 @@
 #define TRACKER_FD 1
 #define AGENT_FD 2
 #define TCP_ACCEPT_FD 3
-#define TCP_SEND_FD 4
-#define TCP_RECEIVE_FD 5
+#define TCP_RECEIVE_FD 4
+#define TCP_SEND_FD 5
 
 #define SERVER_SOCK 0
 #define CLIENT_SOCK 1
+
+#define DEBUG
 
 typedef struct NODE_INFO NODE_INFO;
 

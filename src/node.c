@@ -60,17 +60,22 @@ void runNode(struct NODE_INFO *node) {
         handleInstreams(node);
 
         if (node->connected) {
+            // printf("Sendnigh\n");
             sendNetAlive(node->nodeUDPPort, node->fds[TRACKER_FD].fd, node->trackerAddress, node->trackerPort);
         }
     }
 }
 
 void handleInstreams(struct NODE_INFO* node) {
-    int pollret = poll(node->fds, 6, 5000);
+    uint8_t nrCheck = 4;
+    if (node->fds[TCP_RECEIVE_FD].fd != -1) {
+        nrCheck = 5;
+    }
+    int pollret = poll(node->fds, nrCheck, 5000);
 
     if (pollret > 0) {
 
-        for (int i = 0; i < 6; i++) {
+        for (int i = 0; i < nrCheck; i++) {
             if (node->fds[i].revents & POLLIN) {
                 switch (i) {
                     case STDIN_FD:
@@ -83,7 +88,6 @@ void handleInstreams(struct NODE_INFO* node) {
                     case TCP_ACCEPT_FD:
                         printf("Got connecion!\n");
                         node->fds[TCP_RECEIVE_FD].fd = accept(node->fds[TCP_ACCEPT_FD].fd, NULL, NULL);
-                        node->fds[TCP_RECEIVE_FD].events = POLLIN;
                         break;
                     default:
                         // printf
@@ -168,8 +172,10 @@ bool handleNetGetNodeResponse(struct NODE_INFO* node) {
     struct NET_GET_NODE_RESPONSE_PDU pdu;
     bool read = PDUparseNetGetNodeResp(node->buffer, &(node->buffLen), &pdu);
     if (read) {
+        printf("Address: %s : %d\n", pdu.address, pdu.port);
         if (pdu.port != 0) { //TODO eller address len?
             //Connect to predecesor
+            printf("htnouhnte\n");
             sendNetJoin(node->nodeAddress, node->nodeAcceptPort, node->fds[TRACKER_FD].fd, pdu.address, pdu.port);
         } else {
             node->range = 255;
@@ -194,7 +200,7 @@ bool handleNetJoin(struct NODE_INFO* node) {
     struct NET_JOIN_PDU pdu;
     bool read = PDUparseNetJoin(node->buffer, &(node->buffLen), &pdu);
     if (read) {
-        //printf("Node: %d Max: %d\n", node->nodeAcceptPort, pdu.max_port);
+        printf("Node: %d Max: %d\n", node->nodeAcceptPort, pdu.max_port);
         if (node->range == 255) {
             //Varvet runt yeeet
             
@@ -247,6 +253,11 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
 
     node->fds[TCP_ACCEPT_FD].fd = createServerSocket(0, SOCK_STREAM);
     node->fds[TCP_ACCEPT_FD].events = POLLIN;
+
+    node->fds[TCP_RECEIVE_FD].fd = -1;
+    node->fds[TCP_RECEIVE_FD].events = POLLIN;
+
+    node->fds[TCP_SEND_FD].events = POLLOUT;
 
     node->nodeUDPPort = getSocketPort(node->fds[TRACKER_FD].fd);
     node->nodeAcceptPort = getSocketPort(node->fds[TCP_ACCEPT_FD].fd);
@@ -308,7 +319,6 @@ void connectToNode(struct NODE_INFO* node, char* address, uint16_t port) {
     printf("Connecting to: %s : %d\n", address, port);
 // #endif
     node->fds[TCP_SEND_FD].fd = createSocket(address, port, SOCK_STREAM, CLIENT_SOCK);
-    node->fds[TCP_SEND_FD].events = POLLOUT;
     memcpy(node->nextNodeAddress, address, ADDRESS_LENGTH);
     node->nextNodePort = port;
 }

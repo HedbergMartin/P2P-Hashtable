@@ -19,14 +19,15 @@ void sendUDP(int socket, char* toAddress, uint16_t toPort, uint8_t* msg, uint32_
 
     uint32_t sent = 0;
     do {
+        // printf("Sendsing %d %d\n", sent, msg_len);
         sent += sendto(socket, (char *) msg + sent, msg_len - sent, 0, (struct sockaddr*)&to, sizeof(to));
         //fprintf(stderr, "SendUDP: Type: %d, To %s:%d\n", msg[0], toAddress, toPort);
+        if (sent < 0) {
+            perror("sendUDP:");
+            fprintf(stderr, "\n");
+            exit(1);
+        }
     } while(sent != msg_len);
-    if (sent < 0) {
-        perror("sendUDP:");
-        fprintf(stderr, "\n");
-        exit(1);
-    }
 }
 
 void sendStunLookup(uint16_t port, int fd, char* toAddress, uint16_t toPort) {
