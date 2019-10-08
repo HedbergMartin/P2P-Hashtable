@@ -1,16 +1,22 @@
 #include <inttypes.h>
+#include "pdu.h"
 
 #ifndef __PDU_SENDER__
 #define __PDU_SENDER__
 
+struct CONNECTION {
+    char address[ADDRESS_LENGTH];
+    uint16_t port;
+};
+
 typedef struct NET_JOIN_PDU NET_JOIN_PDU;
 
-void sendUDP(int socket, char* toAddress, uint16_t toPort, uint8_t* msg, uint32_t msg_len);
-void sendStunLookup(uint16_t port, int fd, char* toAddress, uint16_t toPort);
-void sendNetGetNode(uint16_t port, int fd, char* toAddress, uint16_t toPort);
-void sendNetAlive(uint16_t port, int fd, char* toAddress, uint16_t toPort);
-void sendNetJoin(char* srcAddr, uint16_t srcPort, int fd, char* toAddress, uint16_t toPort);
-void sendNetJoinResp(int fd, char* nextAddr, uint16_t nextPort);
-void forwardNetJoin(int fd, struct NET_JOIN_PDU pdu, uint8_t span, char* addr, uint16_t port);
+void sendUDP(int fd, struct CONNECTION to, uint8_t* msg, uint32_t msg_len);
+void sendStunLookup(int fd, struct CONNECTION to, uint16_t port);
+void sendNetGetNode(int fd, struct CONNECTION to, uint16_t port);
+void sendNetAlive(int fd, struct CONNECTION to, uint16_t port);
+void sendNetJoin(int fd, struct CONNECTION to, struct CONNECTION src);
+void sendNetJoinResp(int fd, struct CONNECTION next);
+void forwardNetJoin(int fd, struct NET_JOIN_PDU pdu, uint8_t span, struct CONNECTION tcp);
 
 #endif

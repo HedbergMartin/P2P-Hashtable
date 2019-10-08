@@ -14,6 +14,7 @@
 #define DEBUG
 
 typedef struct NODE_INFO NODE_INFO;
+typedef struct CONNECTION CONNECTION;
 
 int createSocket(char* address, int port, int commType, int sockType);
 int createServerSocket(int port, int commType);

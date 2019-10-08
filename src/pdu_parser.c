@@ -18,11 +18,8 @@ bool readToPDUStruct(uint8_t* buffer, size_t* buffLen, void* pdu, size_t size) {
 }
 
 bool PDUparseNetAlive(uint8_t* buffer, size_t* buffLen, struct NET_ALIVE_PDU* pdu) {
-    //struct NET_ALIVE_PDU pdu;
     bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
-    // printf("Type: %d, Port: %d\n", pdu->type, pdu->port);
     pdu->port = ntohs(pdu->port);
-    // printf("Type: %d, Port: %d\n", pdu->type, pdu->port);
     return read;
 }
 
