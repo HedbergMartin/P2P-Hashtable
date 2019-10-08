@@ -27,13 +27,14 @@ struct NODE_INFO {
 };
 
 int main(const int argc, const char** argv) {
-
+    
     struct NODE_INFO node;
 
     if (!initNode(&node, argc, argv)) {
         return -1;
     }
 
+    
     runNode(&node);
 
     return 0;
