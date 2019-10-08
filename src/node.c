@@ -41,13 +41,13 @@ int main(const int argc, const char** argv) {
 
 void runNode(struct NODE_INFO *node) {
 
-    sendStunLookup(node->fds[TRACKER_FD].fd, node->trackerConnection, node->responsePort);
+    sendStunLookup(node->fds[UDP_FD].fd, node->trackerConnection, node->responsePort);
     
     while (1) {
         handleInstreams(node);
 
         if (node->connected) {
-            sendNetAlive(node->fds[TRACKER_FD].fd, node->trackerConnection, node->responsePort);
+            sendNetAlive(node->fds[UDP_FD].fd, node->trackerConnection, node->responsePort);
         }
     }
 }
@@ -67,7 +67,7 @@ void handleInstreams(struct NODE_INFO* node) {
                     case STDIN_FD:
                         handle_stdin();
                         break;
-                    // case TRACKER_FD:
+                    // case UDP_FD:
                     //     break;
                     // case AGENT_FD:
                     //     break;
@@ -147,7 +147,7 @@ bool handleStunResponse(struct NODE_INFO* node) {
     bool read = readToPDUStruct(node->buffer, &(node->buffLen), &pdu, sizeof(pdu));
     if (read) {
         memcpy(node->nodeConnection.address, pdu.address, ADDRESS_LENGTH);
-        sendNetGetNode(node->fds[TRACKER_FD].fd, node->trackerConnection, node->responsePort);
+        sendNetGetNode(node->fds[UDP_FD].fd, node->trackerConnection, node->responsePort);
     }
     return read;
 }
@@ -161,7 +161,7 @@ bool handleNetGetNodeResponse(struct NODE_INFO* node) {
             struct CONNECTION to;
             memcpy(to.address, pdu.address, ADDRESS_LENGTH);
             to.port = pdu.port;
-            sendNetJoin(node->fds[TRACKER_FD].fd, to, node->nodeConnection);
+            sendNetJoin(node->fds[UDP_FD].fd, to, node->nodeConnection);
         } else {
             node->range = 255;
         }
@@ -230,8 +230,8 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
     node->fds[STDIN_FD].fd = STDIN_FILENO;
     node->fds[STDIN_FD].events = POLLIN;
 
-    node->fds[TRACKER_FD].fd = createServerSocket(0, SOCK_DGRAM);
-    node->fds[TRACKER_FD].events = POLLIN;
+    node->fds[UDP_FD].fd = createServerSocket(0, SOCK_DGRAM);
+    node->fds[UDP_FD].events = POLLIN;
 
     node->fds[AGENT_FD].fd = createServerSocket(0, SOCK_DGRAM); // TODO: determine port
     node->fds[AGENT_FD].events = POLLIN;
@@ -244,12 +244,12 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
 
     node->fds[TCP_SEND_FD].events = POLLOUT;
 
-    node->responsePort = getSocketPort(node->fds[TRACKER_FD].fd);
+    node->responsePort = getSocketPort(node->fds[UDP_FD].fd);
     node->nodeConnection.port = getSocketPort(node->fds[TCP_ACCEPT_FD].fd);
     
     printf("UDP port: %d\nTCP port: %d\n", node->responsePort, node->nodeConnection.port);
 
-    for (int i = TRACKER_FD; i < TCP_ACCEPT_FD; i++) {
+    for (int i = UDP_FD; i < TCP_ACCEPT_FD; i++) {
         if (node->fds[i].fd < 0) {
             return -1;
         }
