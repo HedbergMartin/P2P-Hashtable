@@ -15,7 +15,7 @@ typedef struct NODE_INFO NODE_INFO;
 
 int createSocket(char* address, int port, int commType, int sockType);
 int createServerSocket(int port, int commType);
-int connectToSocket(char* address, int port);
+void connectToNode(struct NODE_INFO* node, char* address, uint16_t port);
 uint16_t getSocketPort(int fd);
 
 int initNode(struct NODE_INFO *node, const int argc, const char **argv);

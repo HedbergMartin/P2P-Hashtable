@@ -72,6 +72,8 @@ void forwardNetJoin(int fd, struct NET_JOIN_PDU pdu, uint8_t span, char* addr, u
         memcpy(pdu.max_address, addr, ADDRESS_LENGTH);
         pdu.max_port = htons(port);
         pdu.max_span = span;
+        
+        printf("Span: %d, New max: %s : %d\n", pdu.max_span, pdu.max_address, ntohs(pdu.max_port));
     }
 
     write(fd, (uint8_t*)&pdu, sizeof(pdu));
