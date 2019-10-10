@@ -13,7 +13,7 @@
  * kuba@cs.umu.se
  */
 
-typedef uint8_t hash_t;
+typedef uint64_t hash_t;
 
 struct table_entry {
     char* ssn;

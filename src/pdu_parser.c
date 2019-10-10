@@ -35,6 +35,8 @@ bool PDUparseNetJoinResp(uint8_t* buffer, size_t* buffLen, struct NET_JOIN_RESPO
     bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
     if (read) {
         pdu->next_port = ntohs(pdu->next_port);
+        pdu->range_start = pdu->range_start;
+        pdu->range_end = pdu->range_end;
     }
     return read;
 }
@@ -48,37 +50,27 @@ bool PDUparseNetJoin(uint8_t* buffer, size_t* buffLen, struct NET_JOIN_PDU* pdu)
     return read;
 }
 
-// char* readBuffer(uint8_t* buffer, int* pos, int bytesToRead) {
-//     char* text = malloc(bytesToRead*sizeof(char));
-//     memcpy(text, &buffer[*pos], bytesToRead);
-//     *pos += bytesToRead;
-//     return text;
-// }
+bool PDUparseValInsert(uint8_t* buffer, size_t* buffLen, struct VAL_INSERT_PDU* pdu) {
+    //bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
+    //if (read) {
+    //    
+    //}
+    // uint8_t type;
+    // uint8_t ssn[SSN_LENGTH];
+    // uint8_t name_length;
+    // uint8_t PAD;
+    // uint8_t* name;
+    // uint8_t email_length;
+    // uint8_t PAD2[7];
+    // uint8_t* email;
+    
+    int len = sizeof(uint8_t) * (1 + SSN_LENGTH + 1 + 1);
+    fprintf(stderr, "name?\n");
+    for (int i = 0; i < 10; i++)
+        fprintf(stderr, "%c\n", *(buffer + len + i));
+    fprintf(stderr, "\n");
 
-// struct NET_GET_NODE_RESPONSE_PDU* PDUparseNetGetNodeResponse() {
-//     return NULL;
-// }
 
-// struct NET_CLOSE_CONNECTION_PDU *
-// 
-// struct NET_GET_NODE_PDU *
-// 
-// struct NET_JOIN_PDU *
-// 
-// struct NET_JOIN_RESPONSE_PDU *
-// 
-// struct STUN_LOOKUP_PDU *
-// 
-// struct NET_NEW_RANGE_PDU *
-// 
-// struct NET_LEAVING_PDU *
-// 
-// struct STUN_RESPONSE_PDU *
-// 
-// struct VAL_INSERT_PDU *
-// 
-// struct VAL_LOOKUP_PDU *
-// 
-// struct VAL_LOOKUP_RESPONSE_PDU *
-// 
-// struct VAL_REMOVE_PDU *
+    bool read = true;
+    return read;
+}

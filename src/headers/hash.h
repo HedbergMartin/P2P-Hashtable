@@ -3,7 +3,7 @@
 
 #include <inttypes.h>
 
-typedef uint8_t hash_t;
-unsigned long hash_ssn(unsigned char *str);
+typedef uint64_t hash_t;
+hash_t hash_ssn(unsigned char *str);
 
 #endif

@@ -12,6 +12,7 @@
 #include "headers/pdu_parser.h"
 #include "headers/pdu_sender.h"
 #include "headers/pdu.h"
+#include "headers/hash.h"
 
 
 struct NODE_INFO {
@@ -23,17 +24,16 @@ struct NODE_INFO {
     struct CONNECTION nextNodeConnection;
     struct pollfd fds[6];
     bool connected;
-    uint8_t range;
+    uint8_t range_start;
+    uint8_t range_end;
 };
 
 int main(const int argc, const char** argv) {
     
     struct NODE_INFO node;
-
     if (!initNode(&node, argc, argv)) {
         return -1;
     }
-
     
     runNode(&node);
 
@@ -104,7 +104,7 @@ void parseInStream(int fd, struct NODE_INFO* node) {
     bool readAgain = true;
     while (readAgain) {
 #ifdef DEBUG
-        printf("Len = %lu\n", node->buffLen);
+        printf("Instream message len = %lu\n", node->buffLen);
 #endif
         if (node->buffLen > 0) {
             readAgain = handlePDU(node);
@@ -113,11 +113,11 @@ void parseInStream(int fd, struct NODE_INFO* node) {
         }
     }
 #ifdef DEBUG
-    printf("Done parse, len above should be 0\n");
+    printf("Done parsing instream message, len above should be 0. Actual len: \n", node->buffLen);
 #endif
 }
 
-bool handlePDU (struct NODE_INFO* node) {
+bool handlePDU(struct NODE_INFO* node) {
     bool read = 0;
     switch(node->buffer[0]) {
         case NET_ALIVE: ;
@@ -136,6 +136,8 @@ bool handlePDU (struct NODE_INFO* node) {
         case NET_JOIN_RESPONSE:
             read = handleNetJoinResponse(node);
             break;
+        case VAL_INSERT:
+            read = handleValInsert(node);
         default:
             break;
     }
@@ -146,6 +148,10 @@ bool handlePDU (struct NODE_INFO* node) {
 bool handleStunResponse(struct NODE_INFO* node) {
     struct STUN_RESPONSE_PDU pdu;
     bool read = readToPDUStruct(node->buffer, &(node->buffLen), &pdu, sizeof(pdu));
+#ifdef SHOW_PDU
+    fprintf(stderr, "Got STUN_RESPNSE:\n");
+    fprintf(stderr, "%s\n", pdu.address);
+#endif
     if (read) {
         memcpy(node->nodeConnection.address, pdu.address, ADDRESS_LENGTH);
         sendNetGetNode(node->fds[UDP_FD].fd, node->trackerConnection, node->responsePort);
@@ -156,6 +162,10 @@ bool handleStunResponse(struct NODE_INFO* node) {
 bool handleNetGetNodeResponse(struct NODE_INFO* node) {
     struct NET_GET_NODE_RESPONSE_PDU pdu;
     bool read = PDUparseNetGetNodeResp(node->buffer, &(node->buffLen), &pdu);
+#ifdef SHOW_PDU
+    fprintf(stderr, "Got NET_GET_NODE_RESPONSE:\n");
+    fprintf(stderr, "%s:%d\n", pdu.address, pdu.port);
+#endif
     if (read) {
         if (pdu.port != 0) { //TODO eller address len?
             // Connect to predecesor
@@ -164,7 +174,8 @@ bool handleNetGetNodeResponse(struct NODE_INFO* node) {
             to.port = pdu.port;
             sendNetJoin(node->fds[UDP_FD].fd, to, node->nodeConnection);
         } else {
-            node->range = 255;
+            node->range_start = 0;
+            node->range_end = 255;
         }
         // Init table
         node->connected = true;
@@ -175,9 +186,14 @@ bool handleNetGetNodeResponse(struct NODE_INFO* node) {
 bool handleNetJoinResponse(struct NODE_INFO* node) {
     struct NET_JOIN_RESPONSE_PDU pdu;
     bool read = PDUparseNetJoinResp(node->buffer, &(node->buffLen), &pdu);
+#ifdef SHOW_PDU
+    fprintf(stderr, "Got NET_JOIN_RESPONSE_PDU:\n");
+    fprintf(stderr, "Next - %s:%d. Range: %d-%d\n", pdu.next_address, pdu.next_port, pdu.range_start, pdu.range_end);
+#endif
     if (read) {
         connectToNode(node, pdu.next_address, pdu.next_port);
-        node->range = 100;
+        node->range_start = pdu.range_start;
+        node->range_end = pdu.range_end;
     }
     return read;
 }
@@ -185,27 +201,45 @@ bool handleNetJoinResponse(struct NODE_INFO* node) {
 bool handleNetJoin(struct NODE_INFO* node) {
     struct NET_JOIN_PDU pdu;
     bool read = PDUparseNetJoin(node->buffer, &(node->buffLen), &pdu);
+#ifdef SHOW_PDU
+    fprintf(stderr, "Got NET_JOIN_PDU:\n");
+    fprintf(stderr, "Src - %s:%d. Max span %d -> %s:%d\n", pdu.src_address, pdu.src_port, pdu.max_span, pdu.max_address, pdu.max_port);
+    fprintf(stderr, "My range is: %d.\n", getRange(node));
+#endif
     if (read) {
-        //printf("Node: %d Max: %d\n", node->nodeAcceptPort, pdu.max_port);
-        if (node->range == 255) {
+        if (getRange(node) == 255) {
             connectToNode(node, pdu.src_address, pdu.src_port);
             
-            sendNetJoinResp(node->fds[TCP_SEND_FD].fd, node->nodeConnection);
-            node->range /= 2;
+            uint8_t successor_range_start;
+            uint8_t successor_range_end;
+            setNewNodeRanges(&node->range_start, &node->range_end, &successor_range_start, &successor_range_end);
+
+            sendNetJoinResp(node->fds[TCP_SEND_FD].fd, node->nodeConnection, successor_range_start, successor_range_end);
         } else if (strcmp(pdu.max_address, node->nodeConnection.address) == 0 && pdu.max_port == node->nodeConnection.port) {
             struct CONNECTION oldNext;
             memcpy(&oldNext, &(node->nextNodeConnection), sizeof(struct CONNECTION));
-            //char oldNextAddr[ADDRESS_LENGTH];
-            //memcpy(oldNextAddr, node->nextNodeConnection.address, ADDRESS_LENGTH);
-            //uint16_t oldNextPort = node->nextNodePort;
-
             connectToNode(node, pdu.src_address, pdu.src_port);
             
-            sendNetJoinResp(node->fds[TCP_SEND_FD].fd, oldNext);
-            node->range /= 2;
+            uint8_t successor_range_start;
+            uint8_t successor_range_end;
+            setNewNodeRanges(&node->range_start, &node->range_end, &successor_range_start, &successor_range_end);
+            
+            sendNetJoinResp(node->fds[TCP_SEND_FD].fd, oldNext, successor_range_start, successor_range_end);
         } else {
-            forwardNetJoin(node->fds[TCP_SEND_FD].fd, pdu, node->range, node->nodeConnection);
+            forwardNetJoin(node->fds[TCP_SEND_FD].fd, pdu, getRange(node), node->nodeConnection);
         }
+    }
+    return read;
+}
+
+bool handleValInsert(struct NODE_INFO *node) {
+    struct VAL_INSERT_PDU pdu;
+    bool read = PDUparseValInsert(node->buffer, &(node->buffLen), &pdu);
+#ifdef SHOW_PDU
+    fprintf(stderr, "Got VAL_INSERT_PDU:\n");
+#endif
+    if (read) {
+        
     }
     return read;
 }
@@ -225,7 +259,7 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
     node->trackerConnection.port = strtol(argv[2], &rest, 10);
 
     if (strlen(rest) != 0) {
-        printf("Port argument must be a number");
+        fprintf(stderr, "Port argument must be a number\n");
         return -1;
     }
     node->fds[STDIN_FD].fd = STDIN_FILENO;
@@ -248,20 +282,29 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
     node->responsePort = getSocketPort(node->fds[UDP_FD].fd);
     node->nodeConnection.port = getSocketPort(node->fds[TCP_ACCEPT_FD].fd);
     
-    printf("UDP port: %d\nTCP port: %d\n", node->responsePort, node->nodeConnection.port);
+    fprintf(stderr, "UDP port: %d\nTCP port: %d\n", node->responsePort, node->nodeConnection.port);
 
     for (int i = UDP_FD; i < TCP_ACCEPT_FD; i++) {
         if (node->fds[i].fd < 0) {
             return -1;
         }
     }
-
     if (listen(node->fds[TCP_ACCEPT_FD].fd, 100) < 0) { // TODO: Listen queue len?
         perror("Listen for connection");
         return -1;
     }
 
     return 1;
+}
+
+uint8_t getRange(struct NODE_INFO* node) {
+    return node->range_end - node->range_start;
+}
+
+void setNewNodeRanges(uint8_t *pre_min, uint8_t* pre_max, uint8_t* succ_min, uint8_t* succ_max) {
+    *succ_max = *pre_max;
+    *pre_max = ((*pre_max - *pre_min) / 2) + *pre_min;
+    *succ_min = *pre_max + 1;
 }
 
 int createSocket(char* address, int port, int commType, int sockType) {

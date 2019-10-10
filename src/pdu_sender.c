@@ -63,14 +63,13 @@ void sendNetJoin(int fd, struct CONNECTION to, struct CONNECTION src) {
     sendUDP(fd, to, (uint8_t*)&pdu, sizeof(pdu));    
 }
 
-void sendNetJoinResp(int fd, struct CONNECTION next) {
+void sendNetJoinResp(int fd, struct CONNECTION next, uint8_t range_start, uint8_t range_end) {
     struct NET_JOIN_RESPONSE_PDU pdu;
     pdu.type = NET_JOIN_RESPONSE;
     memcpy(pdu.next_address, next.address, ADDRESS_LENGTH);
     pdu.next_port = htons(next.port);
-    pdu.range_start = 0;
-    pdu.range_end = 0;
-
+    pdu.range_start = range_start;
+    pdu.range_end = range_end;
     write(fd, (uint8_t*)&pdu, sizeof(pdu));
 }
 
