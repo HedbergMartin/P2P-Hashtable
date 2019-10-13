@@ -13,8 +13,8 @@
 
 #define HASH_RANGE 255
 
-// #define DEBUG
-// #define SHOW_PDU
+#define DEBUG
+#define SHOW_PDU
 
 typedef struct NODE_INFO NODE_INFO;
 typedef struct CONNECTION CONNECTION;

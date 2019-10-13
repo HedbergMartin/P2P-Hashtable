@@ -51,25 +51,28 @@ bool PDUparseNetJoin(uint8_t* buffer, size_t* buffLen, struct NET_JOIN_PDU* pdu)
 }
 
 bool PDUparseValInsert(uint8_t* buffer, size_t* buffLen, struct VAL_INSERT_PDU* pdu) {
-    //bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
-    //if (read) {
-    //    
-    //}
-    // uint8_t type;
-    // uint8_t ssn[SSN_LENGTH];
-    // uint8_t name_length;
-    // uint8_t PAD;
-    // uint8_t* name;
-    // uint8_t email_length;
-    // uint8_t PAD2[7];
-    // uint8_t* email;
-    
-    int len = sizeof(uint8_t) * (1 + SSN_LENGTH + 1 + 1);
-    fprintf(stderr, "name?\n");
-    for (int i = 0; i < 10; i++)
-        fprintf(stderr, "%c\n", *(buffer + len + i));
-    fprintf(stderr, "\n");
+    int namePos = sizeof(uint8_t) * (1 + SSN_LENGTH + 1 + 1);
+    memcpy(pdu->ssn, buffer + 1, SSN_LENGTH);
 
+    pdu->name_length = buffer[sizeof(uint8_t) * (1 + SSN_LENGTH)];
+    fprintf(stderr, "name len %d - '", pdu->name_length);
+    for (int i = 0; i < pdu->name_length; i++)
+        fprintf(stderr, "%c", *(buffer + namePos + i));
+    fprintf(stderr, "'\n");
+    pdu->name = malloc(sizeof(uint8_t) * pdu->name_length);
+    memcpy(pdu->name, buffer + namePos, pdu->name_length);
+
+    pdu->email_length = buffer[namePos + pdu->name_length];
+    int emailPos = namePos + pdu->email_length + sizeof(uint8_t) * 7;
+    fprintf(stderr, "Email len %d - ", pdu->email_length);
+
+    for (int i = 0; i < pdu->email_length; i++)
+        fprintf(stderr, "%c", *(buffer + pdu->email_length + i));
+    pdu->email = malloc(sizeof(uint8_t) * pdu->email_length);
+    memcpy(pdu->email, buffer + emailPos, pdu->email_length);
+
+    fprintf(stderr, "\n");
+    fprintf(stderr, "ALLOCATED SPACE: %ld\n", sizeof(pdu->email));
 
     bool read = true;
     return read;

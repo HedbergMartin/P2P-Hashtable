@@ -19,6 +19,7 @@ struct NODE_INFO {
     uint8_t buffer[BUFFER_SIZE];
     size_t buffLen;
     uint16_t responsePort;
+    uint16_t agentPort;
     struct CONNECTION trackerConnection;
     struct CONNECTION nodeConnection;
     struct CONNECTION nextNodeConnection;
@@ -34,7 +35,6 @@ int main(const int argc, const char** argv) {
     if (!initNode(&node, argc, argv)) {
         return -1;
     }
-    
     runNode(&node);
 
     return 0;
@@ -70,8 +70,10 @@ void handleInstreams(struct NODE_INFO* node) {
                         break;
                     // case UDP_FD:
                     //     break;
-                    // case AGENT_FD:
-                    //     break;
+                     case AGENT_FD:
+                        fprintf(stderr, "Agent UDP message\n");
+                        parseInStream(node->fds[i].fd, node);
+                        break;
                     case TCP_ACCEPT_FD:
                         printf("Got connecion!\n");
                         node->fds[TCP_RECEIVE_FD].fd = accept(node->fds[TCP_ACCEPT_FD].fd, NULL, NULL);
@@ -92,7 +94,7 @@ void handleInstreams(struct NODE_INFO* node) {
 void parseInStream(int fd, struct NODE_INFO* node) {
 
     size_t len = read(fd, node->buffer, BUFFER_SIZE);
-    if (len < 0) {
+    if ((long) len < 0) {
         perror("Failed to read");
         return;
     } else if (len == 0) {
@@ -104,7 +106,7 @@ void parseInStream(int fd, struct NODE_INFO* node) {
     bool readAgain = true;
     while (readAgain) {
 #ifdef DEBUG
-        printf("Instream message len = %lu\n", node->buffLen);
+        fprintf(stderr, "Instream message len = %lu\n", node->buffLen);
 #endif
         if (node->buffLen > 0) {
             readAgain = handlePDU(node);
@@ -113,7 +115,7 @@ void parseInStream(int fd, struct NODE_INFO* node) {
         }
     }
 #ifdef DEBUG
-    printf("Done parsing instream message, len above should be 0. Actual len: \n", node->buffLen);
+    fprintf(stderr, "Done parsing instream message, len above should be 0. Actual len: %ld\n", node->buffLen);
 #endif
 }
 
@@ -137,6 +139,7 @@ bool handlePDU(struct NODE_INFO* node) {
             read = handleNetJoinResponse(node);
             break;
         case VAL_INSERT:
+            fprintf(stderr, "Receivenging VAL_INSERT\n");
             read = handleValInsert(node);
         default:
             break;
@@ -237,6 +240,7 @@ bool handleValInsert(struct NODE_INFO *node) {
     bool read = PDUparseValInsert(node->buffer, &(node->buffLen), &pdu);
 #ifdef SHOW_PDU
     fprintf(stderr, "Got VAL_INSERT_PDU:\n");
+    fprintf(stderr, "%s : %s : %s\n", pdu.ssn, pdu.name, pdu.email);
 #endif
     if (read) {
         
@@ -280,9 +284,10 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
     node->fds[TCP_SEND_FD].events = POLLOUT;
 
     node->responsePort = getSocketPort(node->fds[UDP_FD].fd);
+    node->agentPort = getSocketPort(node->fds[AGENT_FD].fd);
     node->nodeConnection.port = getSocketPort(node->fds[TCP_ACCEPT_FD].fd);
     
-    fprintf(stderr, "UDP port: %d\nTCP port: %d\n", node->responsePort, node->nodeConnection.port);
+    fprintf(stderr, "UDP port: %d\nTCP port: %d\nAgent port: %d\n", node->responsePort, node->nodeConnection.port, node->agentPort);
 
     for (int i = UDP_FD; i < TCP_ACCEPT_FD; i++) {
         if (node->fds[i].fd < 0) {
