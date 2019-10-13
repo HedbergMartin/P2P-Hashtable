@@ -66,7 +66,7 @@ void handleInstreams(struct NODE_INFO* node) {
             if (node->fds[i].revents & POLLIN) {
                 switch (i) {
                     case STDIN_FD:
-                        handle_stdin();
+                        handle_stdin(node);
                         break;
                     // case UDP_FD:
                     //     break;
@@ -251,8 +251,8 @@ bool handleValInsert(struct NODE_INFO *node) {
 int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
     
     if (argc != 3) {
-        fprintf(stderr, "Invalid arguments.");
-        return -1;
+        fprintf(stderr, "Invalid arguments.\n");
+        return 0;
     }
     
     node->buffLen = 0;
@@ -264,7 +264,7 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
 
     if (strlen(rest) != 0) {
         fprintf(stderr, "Port argument must be a number\n");
-        return -1;
+        return 0;
     }
     node->fds[STDIN_FD].fd = STDIN_FILENO;
     node->fds[STDIN_FD].events = POLLIN;
@@ -291,12 +291,12 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
 
     for (int i = UDP_FD; i < TCP_ACCEPT_FD; i++) {
         if (node->fds[i].fd < 0) {
-            return -1;
+            return 0;
         }
     }
     if (listen(node->fds[TCP_ACCEPT_FD].fd, 100) < 0) { // TODO: Listen queue len?
         perror("Listen for connection");
-        return -1;
+        return 0;
     }
 
     return 1;
@@ -367,13 +367,15 @@ uint16_t getSocketPort(int fd) {
     return ntohs(sin.sin_port);
 }
 
-void handle_stdin() {
+void handle_stdin(struct NODE_INFO* node) {
     char buff[256];
     fgets(buff, 255, stdin);
     *strchr(buff, '\n') = 0;
     
     if(strcmp(buff, "exit") == 0) {
         exit(0); // TODO Fix frees
+    } else if (strcmp(buff, "range") == 0) {
+        printf("Range: %d - %d\n", node->range_start, node->range_end);
     } else {
         printf("Unknown command, valid commands are [exit]\n");
     }

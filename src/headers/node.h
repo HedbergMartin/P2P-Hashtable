@@ -37,7 +37,7 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv);
 void runNode(struct NODE_INFO *node);
 void parseInStream(int fd, struct NODE_INFO* node);
 void handleInstreams(struct NODE_INFO* node);
-void handle_stdin();
+void handle_stdin(struct NODE_INFO* node);
 
 
 #endif
