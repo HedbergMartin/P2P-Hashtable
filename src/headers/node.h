@@ -13,7 +13,7 @@
 
 #define HASH_RANGE 255
 
-#define DEBUG
+// #define DEBUG
 // #define SHOW_PDU
 
 typedef struct NODE_INFO NODE_INFO;
@@ -30,10 +30,12 @@ bool handleNetCloseConnection(struct NODE_INFO* node);
 bool handleNetGetNodeResponse(struct NODE_INFO* node);
 bool handleNetJoinResponse(struct NODE_INFO* node);
 bool handleNetJoin(struct NODE_INFO* node);
-int divideHashTable(struct NODE_INFO* node);
+void divideHashTable(struct NODE_INFO* node);
 bool handleValInsert(struct NODE_INFO *node);
 bool handleValLookup(struct NODE_INFO* node);
 bool handleValRemove(struct NODE_INFO* node);
+bool handleNetNewRange(struct NODE_INFO* node);
+bool handleNetLeaving(struct NODE_INFO* node);
 
 uint8_t getRange(struct NODE_INFO* node);
 void setNewNodeRanges(uint8_t *pre_min, uint8_t* pre_max, uint8_t* succ_min, uint8_t* succ_max);
@@ -42,6 +44,6 @@ void runNode(struct NODE_INFO *node);
 void parseInStream(int fd, struct NODE_INFO* node);
 void handleInstreams(struct NODE_INFO* node);
 void handle_stdin(struct NODE_INFO* node);
-
+void nodeTerminate(struct NODE_INFO *node);
 
 #endif

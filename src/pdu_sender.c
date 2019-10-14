@@ -96,6 +96,21 @@ void sendValInsert(int fd, char* ssn, char* name, char* email) {
     write(fd, pdu.email, pdu.email_length);
 }
 
+void sendNetNewRange(int fd, uint8_t new_range_end) {
+    struct NET_NEW_RANGE_PDU pdu;
+    pdu.new_range_end = new_range_end;
+    pdu.type = NET_NEW_RANGE;
+    write(fd, (uint8_t*)&pdu, sizeof(pdu));
+}
+
+void sendNetLeaving(int fd, struct CONNECTION next) {
+    struct NET_LEAVING_PDU pdu;
+    memcpy(pdu.next_address, next.address, ADDRESS_LENGTH);
+    pdu.next_port = next.port;
+    pdu.type = NET_LEAVING;
+    write(fd, (uint8_t*)&pdu, sizeof(pdu));
+}
+
 void forwardNetJoin(int fd, struct NET_JOIN_PDU pdu, uint8_t span, struct CONNECTION tcp) {
     pdu.src_port = htons(pdu.src_port);
     pdu.max_port = htons(pdu.max_port);

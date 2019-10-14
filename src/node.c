@@ -57,7 +57,7 @@ void runNode(struct NODE_INFO *node) {
 void handleInstreams(struct NODE_INFO* node) {
     uint8_t nrCheck = 4;
     if (node->fds[TCP_RECEIVE_FD].fd != -1) {
-        nrCheck = 5;
+        nrCheck = 6;
     }
     int pollret = poll(node->fds, nrCheck, 5000);
 
@@ -79,6 +79,7 @@ void handleInstreams(struct NODE_INFO* node) {
                         node->fds[TCP_RECEIVE_FD].fd = accept(node->fds[TCP_ACCEPT_FD].fd, NULL, NULL);
                         break;
                     default:
+                        printf("RACAEINVG\n");
                         parseInStream(node->fds[i].fd, node);
                         break;
                 }
@@ -105,13 +106,13 @@ void parseInStream(int fd, struct NODE_INFO* node) {
 
     bool readAgain = true;
     while (readAgain) {
-#ifdef DEBUG
+// #ifdef DEBUG
         fprintf(stderr, "Instream message len = %lu. Instream message: ", node->buffLen);
         for (int i = 0; i < node->buffLen; i++) {
             fprintf(stderr, "%c", (char) (node->buffer[i]));
         }
         fprintf(stderr, "\n");
-#endif
+// #endif
         if (node->buffLen > 0) {
             readAgain = handlePDU(node);
         } else {
@@ -134,6 +135,7 @@ bool handlePDU(struct NODE_INFO* node) {
             read = handleStunResponse(node); 
             break;
         case NET_CLOSE_CONNECTION:
+            fprintf(stderr, "NET CLOSE\n");
             read = handleNetCloseConnection(node);
             break;
         case NET_GET_NODE_RESPONSE:
@@ -153,6 +155,14 @@ bool handlePDU(struct NODE_INFO* node) {
             break;
         case VAL_REMOVE:
             read = handleValRemove(node);
+            break;
+        case NET_NEW_RANGE:
+            printf("Woohoo, new range!\n"); // TODO still no receive =(
+            read = handleNetNewRange(node);
+            break;
+        case NET_LEAVING:
+            fprintf(stderr, "NET LEAVING\n"); // TODO still no receive :(
+            read = handleNetLeaving(node);
             break;
         default:
             break;
@@ -179,7 +189,14 @@ bool handleNetCloseConnection(struct NODE_INFO* node) {
     struct NET_CLOSE_CONNECTION_PDU pdu;
     bool read = PDUparseNetCloseConnection(node->buffer, &(node->buffLen), &pdu);
     if (read) {
-        if (close(node->fds[TCP_RECEIVE_FD].fd)) {
+        if (node->fds[TCP_RECEIVE_FD].fd == node->fds[TCP_SEND_FD].fd) { // TODO get this working :/
+            fprintf(stderr, "What the shit!?\n");
+            if (close(node->fds[TCP_SEND_FD].fd) < 0) {
+                perror("Closing TCP_SEND_FD\n");
+            }
+            node->fds[TCP_SEND_FD].fd = -1;
+        }
+        if (close(node->fds[TCP_RECEIVE_FD].fd) < 0) {
             perror("Closing TCP_RECEIVE_FD");
         }
         node->fds[TCP_RECEIVE_FD].fd = -1;
@@ -262,21 +279,21 @@ bool handleNetJoin(struct NODE_INFO* node) {
     return read;
 }
 
-int divideHashTable(struct NODE_INFO* node) {
+void divideHashTable(struct NODE_INFO* node) {
     struct hash_table* t = table_create(hash_ssn, getRange(node));
     struct table_entry* e = NULL;
     while ((e = get_entry_iterator(node->table)) != NULL) {
         int index = hash_ssn(e->ssn) % 255;
         if (index >= node->range_start && index <= node->range_end) {
+            fprintf(stderr, "Sneding\n");
             table_insert(t, e->ssn, e->name, e->email);
         } else {
+            fprintf(stderr, "Insnerting\n");
             sendValInsert(node->fds[TCP_SEND_FD].fd, e->ssn, e->name, e->email);
         }
     }
     table_free(node->table);
     node->table = t;
-
-    return 1;
 }
 
 bool handleValInsert(struct NODE_INFO* node) {
@@ -307,7 +324,7 @@ bool handleValInsert(struct NODE_INFO* node) {
 
 bool handleValLookup(struct NODE_INFO* node) {
     struct VAL_LOOKUP_PDU pdu;
-    bool read = PDUparseHandleValLookup(node->buffer, &(node->buffLen), &pdu);
+    bool read = PDUparseValLookup(node->buffer, &(node->buffLen), &pdu);
     if (read) {
 
     }
@@ -316,10 +333,43 @@ bool handleValLookup(struct NODE_INFO* node) {
 
 bool handleValRemove(struct NODE_INFO* node) {
     struct VAL_REMOVE_PDU pdu;
-    bool read = PDUparseHandleValRemove(node->buffer, &(node->buffLen), &pdu);
+    bool read = PDUparseValRemove(node->buffer, &(node->buffLen), &pdu);
     if (read) {
 
     }
+    return read;
+}
+
+bool handleNetNewRange(struct NODE_INFO* node) {
+    struct NET_NEW_RANGE_PDU pdu;
+    fprintf(stderr, "Got NET_NEW_RANGE_PDU:");
+    fprintf(stderr, "New max: %d\n\n", pdu.new_range_end);
+    bool read = PDUparseNetNewRange(node->buffer, &(node->buffLen), &pdu);
+    if (read) {
+        node->range_end = pdu.new_range_end;
+    }
+
+    return read;
+}
+
+bool handleNetLeaving(struct NODE_INFO* node) {
+    struct NET_LEAVING_PDU pdu;
+    bool read = PDUparseNetLeaving(node->buffer, &(node->buffLen), &pdu);
+    if (read) {
+        fprintf(stderr, "Got NET_LEAVING_PDU");
+        fprintf(stderr, "New node %s:%d", pdu.next_address, pdu.next_port);
+        if (close(node->fds[TCP_SEND_FD].fd) < 0) {
+            perror("Closing TCP_SEND_FD");
+        }
+        node->fds[TCP_SEND_FD].fd = -1;
+        if (pdu.next_port == node->nodeConnection.port && strncmp(node->nodeConnection.address, pdu.next_address, ADDRESS_LENGTH)) {
+            node->fds[TCP_RECEIVE_FD].fd = -1;
+        } else {
+            connectToNode(node, pdu.next_address, pdu.next_port);
+            divideHashTable(node);
+        }
+    }
+
     return read;
 }
 
@@ -357,11 +407,13 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
     node->fds[TCP_RECEIVE_FD].events = POLLIN;
 
     node->fds[TCP_SEND_FD].fd = -1;
-    node->fds[TCP_SEND_FD].events = POLLOUT;
+    node->fds[TCP_SEND_FD].events = POLLIN;
 
     node->responsePort = getSocketPort(node->fds[UDP_FD].fd);
     node->agentPort = getSocketPort(node->fds[AGENT_FD].fd);
     node->nodeConnection.port = getSocketPort(node->fds[TCP_ACCEPT_FD].fd);
+
+    node->table = NULL;
     
     fprintf(stderr, "UDP port: %d\nTCP port: %d\nAgent port: %d\n", node->responsePort, node->nodeConnection.port, node->agentPort);
 
@@ -450,10 +502,29 @@ void handle_stdin(struct NODE_INFO* node) {
     *strchr(buff, '\n') = 0;
     
     if(strcmp(buff, "exit") == 0) {
-        exit(0); // TODO Fix frees
+
+        nodeTerminate(node);
     } else if (strcmp(buff, "range") == 0) {
         printf("Range: %d - %d\n", node->range_start, node->range_end);
     } else {
-        printf("Unknown command, valid commands are [exit]\n");
+        printf("Unknown command, valid commands are [range, exit]\n");
     }
+}
+
+void nodeTerminate(struct NODE_INFO *node) {
+    if (node->nextNodeConnection.port != node->nodeConnection.port
+    || strncmp(node->nextNodeConnection.address, node->nextNodeConnection.address, ADDRESS_LENGTH) != 0) {
+        printf("SNEDINGSNEDINGSNEDING\n");
+        sendNetCloseConnection(node->fds[TCP_SEND_FD].fd);
+        sendNetNewRange(node->fds[TCP_RECEIVE_FD].fd, node->range_end);
+        sendNetLeaving(node->fds[TCP_RECEIVE_FD].fd, node->nextNodeConnection);
+    }
+    for (int i = TCP_RECEIVE_FD; i < TCP_SEND_FD; i++) {
+        close(node->fds[i].fd);
+    }
+    if (node->table != NULL) {
+        table_free(node->table);
+    }
+    printf("Goodbye!\n");
+    exit(0);
 }

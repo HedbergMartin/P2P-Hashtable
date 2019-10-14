@@ -20,7 +20,8 @@ void sendNetAlive(int fd, struct CONNECTION to, uint16_t port);
 void sendNetJoin(int fd, struct CONNECTION to, struct CONNECTION src);
 void sendNetJoinResp(int fd, struct CONNECTION next, uint8_t range_start, uint8_t range_end);
 void sendValInsert(int fd, char* ssn, char* name, char* email);
-
+void sendNetNewRange(int fd, uint8_t new_range_end);
+void sendNetLeaving(int fd, struct CONNECTION next);
 void forwardNetJoin(int fd, struct NET_JOIN_PDU pdu, uint8_t span, struct CONNECTION tcp);
 
 #endif

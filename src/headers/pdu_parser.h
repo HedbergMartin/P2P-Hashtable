@@ -14,9 +14,11 @@ bool PDUparseNetCloseConnection(uint8_t* buffer, size_t* buffLen, struct NET_CLO
 bool PDUparseNetGetNodeResp(uint8_t* buffer, size_t* buffLen, struct NET_GET_NODE_RESPONSE_PDU* pdu);
 bool PDUparseNetJoinResp(uint8_t* buffer, size_t* buffLen, struct NET_JOIN_RESPONSE_PDU* pdu);
 bool PDUparseNetJoin(uint8_t* buffer, size_t* buffLen, struct NET_JOIN_PDU* pdu);
+bool PDUparseNetNewRange(uint8_t* buffer, size_t* buffLen, struct NET_NEW_RANGE_PDU* pdu);
+bool PDUparseNetLeaving(uint8_t* buffer, size_t* buffLen, struct NET_LEAVING_PDU* pdu);
 bool PDUparseValInsert(uint8_t* buffer, size_t* buffLen, struct VAL_INSERT_PDU* pdu);
-bool PDUparseValLookup(uint8_t* buffer, size_t* buffLen, struct VAL_INSERT_PDU* pdu);
-bool PDUparseValRemove(uint8_t* buffer, size_t* buffLen, struct VAL_INSERT_PDU* pdu);
+bool PDUparseValLookup(uint8_t* buffer, size_t* buffLen, struct VAL_LOOKUP_PDU* pdu);
+bool PDUparseValRemove(uint8_t* buffer, size_t* buffLen, struct VAL_REMOVE_PDU* pdu);
 // bool PDUparseStunResponse(uint8_t* buffer, size_t* buffLen, struct STUN_RESPONSE_PDU* pdu);
 
 #endif

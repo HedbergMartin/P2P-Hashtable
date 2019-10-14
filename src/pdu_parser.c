@@ -54,6 +54,18 @@ bool PDUparseNetJoin(uint8_t* buffer, size_t* buffLen, struct NET_JOIN_PDU* pdu)
     return read;
 }
 
+bool PDUparseNetNewRange(uint8_t* buffer, size_t* buffLen, struct NET_NEW_RANGE_PDU* pdu) { 
+    return readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
+}
+
+bool PDUparseNetLeaving(uint8_t* buffer, size_t* buffLen, struct NET_LEAVING_PDU* pdu) {
+    if (readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu))) {
+        pdu->next_port = ntohs(pdu->next_port);
+        return true;
+    }
+    return false;
+}
+
 bool PDUparseValInsert(uint8_t* buffer, size_t* buffLen, struct VAL_INSERT_PDU* pdu) {
     uint16_t pdusize = 0;
     uint8_t namePos = 1 + SSN_LENGTH + 1 + 1;
@@ -92,12 +104,12 @@ bool PDUparseValInsert(uint8_t* buffer, size_t* buffLen, struct VAL_INSERT_PDU* 
     return true;
 }
 
-bool PDUparseValLookup(uint8_t* buffer, size_t* buffLen, struct VAL_INSERT_PDU* pdu) {
+bool PDUparseValLookup(uint8_t* buffer, size_t* buffLen, struct VAL_LOOKUP_PDU* pdu) {
 
     return true;
 }
 
-bool PDUparseValRemove(uint8_t* buffer, size_t* buffLen, struct VAL_INSERT_PDU* pdu) {
+bool PDUparseValRemove(uint8_t* buffer, size_t* buffLen, struct VAL_REMOVE_PDU* pdu) {
 
     return true;
 }
