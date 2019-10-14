@@ -147,6 +147,13 @@ bool handlePDU(struct NODE_INFO* node) {
             break;
         case VAL_INSERT:
             read = handleValInsert(node);
+            break;
+        case VAL_LOOKUP:
+            read = handleValLookup(node);
+            break;
+        case VAL_REMOVE:
+            read = handleValRemove(node);
+            break;
         default:
             break;
     }
@@ -272,7 +279,7 @@ int divideHashTable(struct NODE_INFO* node) {
     return 1;
 }
 
-bool handleValInsert(struct NODE_INFO *node) {
+bool handleValInsert(struct NODE_INFO* node) {
     struct VAL_INSERT_PDU pdu;
     bool read = PDUparseValInsert(node->buffer, &(node->buffLen), &pdu);
     if (read) {
@@ -294,6 +301,24 @@ bool handleValInsert(struct NODE_INFO *node) {
         free(pdu.name);
         free(pdu.email);
         fprintf(stderr, "\n\n");
+    }
+    return read;
+}
+
+bool handleValLookup(struct NODE_INFO* node) {
+    struct VAL_LOOKUP_PDU pdu;
+    bool read = PDUparseHandleValLookup(node->buffer, &(node->buffLen), &pdu);
+    if (read) {
+
+    }
+    return read;
+}
+
+bool handleValRemove(struct NODE_INFO* node) {
+    struct VAL_REMOVE_PDU pdu;
+    bool read = PDUparseHandleValRemove(node->buffer, &(node->buffLen), &pdu);
+    if (read) {
+
     }
     return read;
 }

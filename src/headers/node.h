@@ -32,6 +32,8 @@ bool handleNetJoinResponse(struct NODE_INFO* node);
 bool handleNetJoin(struct NODE_INFO* node);
 int divideHashTable(struct NODE_INFO* node);
 bool handleValInsert(struct NODE_INFO *node);
+bool handleValLookup(struct NODE_INFO* node);
+bool handleValRemove(struct NODE_INFO* node);
 
 uint8_t getRange(struct NODE_INFO* node);
 void setNewNodeRanges(uint8_t *pre_min, uint8_t* pre_max, uint8_t* succ_min, uint8_t* succ_max);

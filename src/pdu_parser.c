@@ -91,3 +91,13 @@ bool PDUparseValInsert(uint8_t* buffer, size_t* buffLen, struct VAL_INSERT_PDU* 
 
     return true;
 }
+
+bool PDUparseValLookup(uint8_t* buffer, size_t* buffLen, struct VAL_INSERT_PDU* pdu) {
+
+    return true;
+}
+
+bool PDUparseValRemove(uint8_t* buffer, size_t* buffLen, struct VAL_INSERT_PDU* pdu) {
+
+    return true;
+}
