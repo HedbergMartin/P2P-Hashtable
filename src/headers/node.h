@@ -38,6 +38,7 @@ bool handleNetNewRange(struct NODE_INFO* node);
 bool handleNetLeaving(struct NODE_INFO* node);
 
 uint8_t getRange(struct NODE_INFO* node);
+bool inRange(struct NODE_INFO* node, uint8_t index);
 void setNewNodeRanges(uint8_t *pre_min, uint8_t* pre_max, uint8_t* succ_min, uint8_t* succ_max);
 int initNode(struct NODE_INFO *node, const int argc, const char **argv);
 void runNode(struct NODE_INFO *node);

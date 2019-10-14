@@ -60,9 +60,9 @@ void handleInstreams(struct NODE_INFO* node) {
         nrCheck = 6;
     }
     int pollret = poll(node->fds, nrCheck, 5000);
-
+    
+    printf("Updating\n");
     if (pollret > 0) {
-
         for (int i = 0; i < nrCheck; i++) {
             if (node->fds[i].revents & POLLIN) {
                 switch (i) {
@@ -79,7 +79,7 @@ void handleInstreams(struct NODE_INFO* node) {
                         node->fds[TCP_RECEIVE_FD].fd = accept(node->fds[TCP_ACCEPT_FD].fd, NULL, NULL);
                         break;
                     default:
-                        printf("RACAEINVG\n");
+                        // printf("RACAEINVG\n");
                         parseInStream(node->fds[i].fd, node);
                         break;
                 }
@@ -106,13 +106,13 @@ void parseInStream(int fd, struct NODE_INFO* node) {
 
     bool readAgain = true;
     while (readAgain) {
-// #ifdef DEBUG
+#ifdef DEBUG
         fprintf(stderr, "Instream message len = %lu. Instream message: ", node->buffLen);
         for (int i = 0; i < node->buffLen; i++) {
             fprintf(stderr, "%c", (char) (node->buffer[i]));
         }
         fprintf(stderr, "\n");
-// #endif
+#endif
         if (node->buffLen > 0) {
             readAgain = handlePDU(node);
         } else {
@@ -284,7 +284,7 @@ void divideHashTable(struct NODE_INFO* node) {
     struct table_entry* e = NULL;
     while ((e = get_entry_iterator(node->table)) != NULL) {
         int index = hash_ssn(e->ssn) % 255;
-        if (index >= node->range_start && index <= node->range_end) {
+        if (inRange(node, index)) {
             fprintf(stderr, "Sneding\n");
             table_insert(t, e->ssn, e->name, e->email);
         } else {
@@ -306,7 +306,7 @@ bool handleValInsert(struct NODE_INFO* node) {
 #endif
         int index = hash_ssn((char *) pdu.ssn) % 255;
         fprintf(stderr, "index: %d. Range %d-%d. ", index, node->range_start, node->range_end);
-        if (index >= node->range_start && index <= node->range_end) {
+        if (inRange(node, index)) {
             fprintf(stderr, "Inserting: %s", (char *)pdu.ssn);
             table_insert(node->table, (char *)pdu.ssn, (char *)pdu.name, (char *)pdu.email);
         } else {
@@ -324,9 +324,28 @@ bool handleValInsert(struct NODE_INFO* node) {
 
 bool handleValLookup(struct NODE_INFO* node) {
     struct VAL_LOOKUP_PDU pdu;
+    printf("Var\n");
     bool read = PDUparseValLookup(node->buffer, &(node->buffLen), &pdu);
     if (read) {
-
+        int index = hash_ssn(pdu.ssn) % 255;
+        printf("Krashar\n");
+        if (inRange(node, index)) {
+            
+            printf("du\n");
+            struct table_entry* entry = table_lookup(node->table, pdu.ssn);
+            struct CONNECTION to;
+            memcpy(to.address, pdu.sender_address, ADDRESS_LENGTH);
+            to.port = pdu.sender_port;
+            if (entry) {
+                sendValLookupResp(node->fds[AGENT_FD].fd, to, pdu.ssn, entry->name, entry->email);
+            } else {
+                sendValLookupResp(node->fds[AGENT_FD].fd, to, pdu.ssn, NULL, NULL);
+            }
+            
+        } else {
+            
+            forwardValLookup(node->fds[TCP_SEND_FD].fd, pdu);
+        }
     }
     return read;
 }
@@ -432,6 +451,10 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
 
 uint8_t getRange(struct NODE_INFO* node) {
     return node->range_end - node->range_start;
+}
+
+bool inRange(struct NODE_INFO* node, uint8_t index) {
+    return index >= node->range_start && index <= node->range_end;
 }
 
 void setNewNodeRanges(uint8_t *pre_min, uint8_t* pre_max, uint8_t* succ_min, uint8_t* succ_max) {

@@ -96,6 +96,25 @@ void sendValInsert(int fd, char* ssn, char* name, char* email) {
     write(fd, pdu.email, pdu.email_length);
 }
 
+void sendValLookupResp(int fd, struct CONNECTION to, char* ssn, char* name, char* email) {
+    struct VAL_LOOKUP_RESPONSE_PDU pdu;
+    pdu.type = VAL_LOOKUP_RESPONSE;
+    pdu.email = (uint8_t *) email;
+    pdu.email_length = strlen(email) + 1;
+    pdu.name = (uint8_t *) name;
+    pdu.name_length = strlen(name) + 1;
+    memcpy(pdu.ssn, ssn, SSN_LENGTH);
+
+    // size_t pdusize = sizeof(pdu) + pdu.email_length - 8 + pdu.name_length - 8; //-8 for the pointer sizes
+
+    //TODO Fix and send as one chuck?
+    sendUDP(fd, to, (uint8_t*)&pdu, 16);
+    sendUDP(fd, to, pdu.name, pdu.name_length);
+    sendUDP(fd, to, &pdu.email_length, 1);
+    sendUDP(fd, to, pdu.PAD2, 7);
+    sendUDP(fd, to, pdu.email, pdu.email_length);
+}
+
 void sendNetNewRange(int fd, uint8_t new_range_end) {
     struct NET_NEW_RANGE_PDU pdu;
     pdu.new_range_end = new_range_end;
@@ -108,6 +127,12 @@ void sendNetLeaving(int fd, struct CONNECTION next) {
     memcpy(pdu.next_address, next.address, ADDRESS_LENGTH);
     pdu.next_port = next.port;
     pdu.type = NET_LEAVING;
+    write(fd, (uint8_t*)&pdu, sizeof(pdu));
+}
+
+void forwardValLookup(int fd, struct VAL_LOOKUP_PDU pdu) {
+    pdu.sender_port = htons(pdu.sender_port);
+
     write(fd, (uint8_t*)&pdu, sizeof(pdu));
 }
 

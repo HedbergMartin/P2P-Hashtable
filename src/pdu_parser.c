@@ -105,7 +105,10 @@ bool PDUparseValInsert(uint8_t* buffer, size_t* buffLen, struct VAL_INSERT_PDU* 
 }
 
 bool PDUparseValLookup(uint8_t* buffer, size_t* buffLen, struct VAL_LOOKUP_PDU* pdu) {
-
+    bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
+    if (read) {
+        pdu->sender_port = ntohs(pdu->sender_port);
+    }
     return true;
 }
 
