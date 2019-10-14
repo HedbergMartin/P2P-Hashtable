@@ -3,7 +3,7 @@
 /**
  * djb2 hash function. No idea what it does but it works!
  */
-hash_t hash_ssn(unsigned char *str) {
+hash_t hash_ssn(char *str) {
 
     hash_t hash = 5381;
     int c;

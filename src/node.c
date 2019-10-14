@@ -13,6 +13,7 @@
 #include "headers/pdu_sender.h"
 #include "headers/pdu.h"
 #include "headers/hash.h"
+#include "headers/hash_table.h"
 
 
 struct NODE_INFO {
@@ -27,6 +28,7 @@ struct NODE_INFO {
     bool connected;
     uint8_t range_start;
     uint8_t range_end;
+    struct hash_table* table;
 };
 
 int main(const int argc, const char** argv) {
@@ -36,7 +38,6 @@ int main(const int argc, const char** argv) {
         return -1;
     }
     runNode(&node);
-
     return 0;
 }
 
@@ -71,11 +72,10 @@ void handleInstreams(struct NODE_INFO* node) {
                     // case UDP_FD:
                     //     break;
                      case AGENT_FD:
-                        fprintf(stderr, "Agent UDP message\n");
                         parseInStream(node->fds[i].fd, node);
                         break;
                     case TCP_ACCEPT_FD:
-                        printf("Got connecion!\n");
+                        printf("Got TCP connecion!\n");
                         node->fds[TCP_RECEIVE_FD].fd = accept(node->fds[TCP_ACCEPT_FD].fd, NULL, NULL);
                         break;
                     default:
@@ -93,8 +93,8 @@ void handleInstreams(struct NODE_INFO* node) {
 
 void parseInStream(int fd, struct NODE_INFO* node) {
 
-    size_t len = read(fd, node->buffer, BUFFER_SIZE);
-    if ((long) len < 0) {
+    ssize_t len = read(fd, node->buffer + node->buffLen, BUFFER_SIZE);
+    if (len < 0) {
         perror("Failed to read");
         return;
     } else if (len == 0) {
@@ -106,7 +106,11 @@ void parseInStream(int fd, struct NODE_INFO* node) {
     bool readAgain = true;
     while (readAgain) {
 #ifdef DEBUG
-        fprintf(stderr, "Instream message len = %lu\n", node->buffLen);
+        fprintf(stderr, "Instream message len = %lu. Instream message: ", node->buffLen);
+        for (int i = 0; i < node->buffLen; i++) {
+            fprintf(stderr, "%c", (char) (node->buffer[i]));
+        }
+        fprintf(stderr, "\n");
 #endif
         if (node->buffLen > 0) {
             readAgain = handlePDU(node);
@@ -129,6 +133,9 @@ bool handlePDU(struct NODE_INFO* node) {
         case STUN_RESPONSE:
             read = handleStunResponse(node); 
             break;
+        case NET_CLOSE_CONNECTION:
+            read = handleNetCloseConnection(node);
+            break;
         case NET_GET_NODE_RESPONSE:
             read = handleNetGetNodeResponse(node);
             break;
@@ -139,7 +146,6 @@ bool handlePDU(struct NODE_INFO* node) {
             read = handleNetJoinResponse(node);
             break;
         case VAL_INSERT:
-            fprintf(stderr, "Receivenging VAL_INSERT\n");
             read = handleValInsert(node);
         default:
             break;
@@ -162,6 +168,18 @@ bool handleStunResponse(struct NODE_INFO* node) {
     return read;
 }
 
+bool handleNetCloseConnection(struct NODE_INFO* node) {
+    struct NET_CLOSE_CONNECTION_PDU pdu;
+    bool read = PDUparseNetCloseConnection(node->buffer, &(node->buffLen), &pdu);
+    if (read) {
+        if (close(node->fds[TCP_RECEIVE_FD].fd)) {
+            perror("Closing TCP_RECEIVE_FD");
+        }
+        node->fds[TCP_RECEIVE_FD].fd = -1;
+    }
+    return read;
+}
+
 bool handleNetGetNodeResponse(struct NODE_INFO* node) {
     struct NET_GET_NODE_RESPONSE_PDU pdu;
     bool read = PDUparseNetGetNodeResp(node->buffer, &(node->buffLen), &pdu);
@@ -170,8 +188,7 @@ bool handleNetGetNodeResponse(struct NODE_INFO* node) {
     fprintf(stderr, "%s:%d\n", pdu.address, pdu.port);
 #endif
     if (read) {
-        if (pdu.port != 0) { //TODO eller address len?
-            // Connect to predecesor
+        if (pdu.port != 0) {
             struct CONNECTION to;
             memcpy(to.address, pdu.address, ADDRESS_LENGTH);
             to.port = pdu.port;
@@ -179,8 +196,8 @@ bool handleNetGetNodeResponse(struct NODE_INFO* node) {
         } else {
             node->range_start = 0;
             node->range_end = 255;
+            node->table = table_create(hash_ssn, getRange(node));
         }
-        // Init table
         node->connected = true;
     }
     return read;
@@ -197,6 +214,7 @@ bool handleNetJoinResponse(struct NODE_INFO* node) {
         connectToNode(node, pdu.next_address, pdu.next_port);
         node->range_start = pdu.range_start;
         node->range_end = pdu.range_end;
+        node->table = table_create(hash_ssn, getRange(node));
     }
     return read;
 }
@@ -218,6 +236,7 @@ bool handleNetJoin(struct NODE_INFO* node) {
             setNewNodeRanges(&node->range_start, &node->range_end, &successor_range_start, &successor_range_end);
 
             sendNetJoinResp(node->fds[TCP_SEND_FD].fd, node->nodeConnection, successor_range_start, successor_range_end);
+            divideHashTable(node);
         } else if (strcmp(pdu.max_address, node->nodeConnection.address) == 0 && pdu.max_port == node->nodeConnection.port) {
             struct CONNECTION oldNext;
             memcpy(&oldNext, &(node->nextNodeConnection), sizeof(struct CONNECTION));
@@ -228,6 +247,7 @@ bool handleNetJoin(struct NODE_INFO* node) {
             setNewNodeRanges(&node->range_start, &node->range_end, &successor_range_start, &successor_range_end);
             
             sendNetJoinResp(node->fds[TCP_SEND_FD].fd, oldNext, successor_range_start, successor_range_end);
+            divideHashTable(node);
         } else {
             forwardNetJoin(node->fds[TCP_SEND_FD].fd, pdu, getRange(node), node->nodeConnection);
         }
@@ -235,15 +255,45 @@ bool handleNetJoin(struct NODE_INFO* node) {
     return read;
 }
 
+int divideHashTable(struct NODE_INFO* node) {
+    struct hash_table* t = table_create(hash_ssn, getRange(node));
+    struct table_entry* e = NULL;
+    while ((e = get_entry_iterator(node->table)) != NULL) {
+        int index = hash_ssn(e->ssn) % 255;
+        if (index >= node->range_start && index <= node->range_end) {
+            table_insert(t, e->ssn, e->name, e->email);
+        } else {
+            sendValInsert(node->fds[TCP_SEND_FD].fd, e->ssn, e->name, e->email);
+        }
+    }
+    table_free(node->table);
+    node->table = t;
+
+    return 1;
+}
+
 bool handleValInsert(struct NODE_INFO *node) {
     struct VAL_INSERT_PDU pdu;
     bool read = PDUparseValInsert(node->buffer, &(node->buffLen), &pdu);
-#ifdef SHOW_PDU
-    fprintf(stderr, "Got VAL_INSERT_PDU:\n");
-    fprintf(stderr, "%s : %s : %s\n", pdu.ssn, pdu.name, pdu.email);
-#endif
     if (read) {
-        
+#ifdef SHOW_PDU
+        fprintf(stderr, "Got VAL_INSERT_PDU:\n");
+        fprintf(stderr, "%s : %s : %s\n", pdu.ssn, pdu.name, pdu.email);
+#endif
+        int index = hash_ssn((char *) pdu.ssn) % 255;
+        fprintf(stderr, "index: %d. Range %d-%d. ", index, node->range_start, node->range_end);
+        if (index >= node->range_start && index <= node->range_end) {
+            fprintf(stderr, "Inserting: %s", (char *)pdu.ssn);
+            table_insert(node->table, (char *)pdu.ssn, (char *)pdu.name, (char *)pdu.email);
+        } else {
+            fprintf(stderr, "Forwarding");
+            sendValInsert(node->fds[TCP_SEND_FD].fd, (char *)pdu.ssn, (char *)pdu.name, (char *)pdu.email);
+        }
+
+
+        free(pdu.name);
+        free(pdu.email);
+        fprintf(stderr, "\n\n");
     }
     return read;
 }
@@ -281,6 +331,7 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
     node->fds[TCP_RECEIVE_FD].fd = -1;
     node->fds[TCP_RECEIVE_FD].events = POLLIN;
 
+    node->fds[TCP_SEND_FD].fd = -1;
     node->fds[TCP_SEND_FD].events = POLLOUT;
 
     node->responsePort = getSocketPort(node->fds[UDP_FD].fd);
@@ -349,9 +400,10 @@ int createServerSocket(int port, int commType) {
 }
 
 void connectToNode(struct NODE_INFO* node, char* address, uint16_t port) {
-// #ifdef DEBUG
     printf("Connecting to: %s : %d\n", address, port);
-// #endif
+    if (node->fds[TCP_SEND_FD].fd != -1) {
+        sendNetCloseConnection(node->fds[TCP_SEND_FD].fd);
+    }
     node->fds[TCP_SEND_FD].fd = createSocket(address, port, SOCK_STREAM, CLIENT_SOCK);
     memcpy(node->nextNodeConnection.address, address, ADDRESS_LENGTH);
     node->nextNodeConnection.port = port;

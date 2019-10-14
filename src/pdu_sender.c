@@ -7,6 +7,7 @@
 
 
 #include "headers/pdu_sender.h"
+#include "headers/hash_table.h"
 
 
 void sendUDP(int fd, struct CONNECTION to, uint8_t* msg, uint32_t msg_len) {
@@ -25,6 +26,12 @@ void sendUDP(int fd, struct CONNECTION to, uint8_t* msg, uint32_t msg_len) {
             exit(1);
         }
     } while(sent != msg_len);
+}
+
+void sendNetCloseConnection(int fd) {
+    struct NET_CLOSE_CONNECTION_PDU pdu;
+    pdu.type = NET_CLOSE_CONNECTION;
+    write(fd, (uint8_t*)&pdu, sizeof(pdu));
 }
 
 void sendStunLookup(int fd, struct CONNECTION to, uint16_t port) {
@@ -73,6 +80,22 @@ void sendNetJoinResp(int fd, struct CONNECTION next, uint8_t range_start, uint8_
     write(fd, (uint8_t*)&pdu, sizeof(pdu));
 }
 
+void sendValInsert(int fd, char* ssn, char* name, char* email) {
+    struct VAL_INSERT_PDU pdu;
+    pdu.type = VAL_INSERT;
+    pdu.email = (uint8_t *) email;
+    pdu.email_length = strlen(email) + 1;
+    pdu.name = (uint8_t *) name;
+    pdu.name_length = strlen(name) + 1;
+    memcpy(pdu.ssn, ssn, SSN_LENGTH);
+
+    write(fd, (uint8_t*)&pdu, 16);
+    write(fd, pdu.name, pdu.name_length);
+    write(fd, &pdu.email_length, 1);
+    write(fd, pdu.PAD2, 7);
+    write(fd, pdu.email, pdu.email_length);
+}
+
 void forwardNetJoin(int fd, struct NET_JOIN_PDU pdu, uint8_t span, struct CONNECTION tcp) {
     pdu.src_port = htons(pdu.src_port);
     pdu.max_port = htons(pdu.max_port);
@@ -80,8 +103,6 @@ void forwardNetJoin(int fd, struct NET_JOIN_PDU pdu, uint8_t span, struct CONNEC
         memcpy(pdu.max_address, tcp.address, ADDRESS_LENGTH);
         pdu.max_port = htons(tcp.port);
         pdu.max_span = span;
-        
-        printf("Span: %d, New max: %s : %d\n", pdu.max_span, pdu.max_address, ntohs(pdu.max_port));
     }
 
     write(fd, (uint8_t*)&pdu, sizeof(pdu));

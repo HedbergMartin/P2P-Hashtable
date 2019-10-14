@@ -14,7 +14,7 @@
 #define HASH_RANGE 255
 
 #define DEBUG
-#define SHOW_PDU
+// #define SHOW_PDU
 
 typedef struct NODE_INFO NODE_INFO;
 typedef struct CONNECTION CONNECTION;
@@ -26,9 +26,11 @@ uint16_t getSocketPort(int fd);
 
 bool handlePDU(struct NODE_INFO* node);
 bool handleStunResponse(struct NODE_INFO* node);
+bool handleNetCloseConnection(struct NODE_INFO* node);
 bool handleNetGetNodeResponse(struct NODE_INFO* node);
 bool handleNetJoinResponse(struct NODE_INFO* node);
 bool handleNetJoin(struct NODE_INFO* node);
+int divideHashTable(struct NODE_INFO* node);
 bool handleValInsert(struct NODE_INFO *node);
 
 uint8_t getRange(struct NODE_INFO* node);

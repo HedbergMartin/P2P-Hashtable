@@ -4,6 +4,6 @@
 #include <inttypes.h>
 
 typedef uint64_t hash_t;
-hash_t hash_ssn(unsigned char *str);
+hash_t hash_ssn(char *str);
 
 #endif

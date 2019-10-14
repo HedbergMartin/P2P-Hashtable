@@ -24,5 +24,4 @@ if __name__ == '__main__':
         print("Inserting {} {} {}".format(ssn, email, name))
         sock.sendall(msg)
         print('Sent insert!')
-        break
         #time.sleep(0.5)
