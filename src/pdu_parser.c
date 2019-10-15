@@ -109,10 +109,10 @@ bool PDUparseValLookup(uint8_t* buffer, size_t* buffLen, struct VAL_LOOKUP_PDU* 
     if (read) {
         pdu->sender_port = ntohs(pdu->sender_port);
     }
-    return true;
+    return read;
 }
 
 bool PDUparseValRemove(uint8_t* buffer, size_t* buffLen, struct VAL_REMOVE_PDU* pdu) {
-
-    return true;
+    bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
+    return read;
 }

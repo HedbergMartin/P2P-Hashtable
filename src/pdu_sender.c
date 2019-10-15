@@ -88,11 +88,22 @@ void sendValInsert(int fd, char* ssn, char* name, char* email) {
     pdu.name_length = strlen(name) + 1;
     memcpy(pdu.ssn, ssn, SSN_LENGTH);
 
-    write(fd, (uint8_t*)&pdu, 16);
-    write(fd, pdu.name, pdu.name_length);
-    write(fd, &pdu.email_length, 1);
-    write(fd, pdu.PAD2, 7);
-    write(fd, pdu.email, pdu.email_length);
+    size_t pdusize = sizeof(pdu) + pdu.email_length - 8 + pdu.name_length - 8; //-8 for the pointer sizes
+
+    uint8_t buffer[pdusize];
+    size_t buffSize = 0;
+    
+    addToBuffer(buffer, &buffSize, (uint8_t*)&pdu, 16);
+    addToBuffer(buffer, &buffSize, pdu.name, pdu.name_length);
+    addToBuffer(buffer, &buffSize, &pdu.email_length, 1);
+    addToBuffer(buffer, &buffSize, pdu.PAD2, 7);
+    addToBuffer(buffer, &buffSize, pdu.email, pdu.email_length);
+
+    if (buffSize != pdusize) {
+        fprintf(stderr, "ERROR SIZE NOT MATCH!!!!\n");
+    }
+
+    write(fd, buffer, pdusize);
 }
 
 void sendValLookupResp(int fd, struct CONNECTION to, char* ssn, char* name, char* email) {
@@ -104,14 +115,21 @@ void sendValLookupResp(int fd, struct CONNECTION to, char* ssn, char* name, char
     pdu.name_length = strlen(name) + 1;
     memcpy(pdu.ssn, ssn, SSN_LENGTH);
 
-    // size_t pdusize = sizeof(pdu) + pdu.email_length - 8 + pdu.name_length - 8; //-8 for the pointer sizes
+    size_t pdusize = sizeof(pdu) + pdu.email_length - 8 + pdu.name_length - 8; //-8 for the pointer sizes
 
-    //TODO Fix and send as one chuck?
-    sendUDP(fd, to, (uint8_t*)&pdu, 16);
-    sendUDP(fd, to, pdu.name, pdu.name_length);
-    sendUDP(fd, to, &pdu.email_length, 1);
-    sendUDP(fd, to, pdu.PAD2, 7);
-    sendUDP(fd, to, pdu.email, pdu.email_length);
+    uint8_t buffer[pdusize];
+    size_t buffSize = 0;
+    
+    addToBuffer(buffer, &buffSize, (uint8_t*)&pdu, 16);
+    addToBuffer(buffer, &buffSize, pdu.name, pdu.name_length);
+    addToBuffer(buffer, &buffSize, &pdu.email_length, 1);
+    addToBuffer(buffer, &buffSize, pdu.PAD2, 7);
+    addToBuffer(buffer, &buffSize, pdu.email, pdu.email_length);
+
+    if (buffSize != pdusize) {
+        fprintf(stderr, "ERROR SIZE NOT MATCH!!!!\n");
+    }
+    sendUDP(fd, to, buffer, pdusize);
 }
 
 void sendNetNewRange(int fd, uint8_t new_range_end) {
@@ -136,6 +154,10 @@ void forwardValLookup(int fd, struct VAL_LOOKUP_PDU pdu) {
     write(fd, (uint8_t*)&pdu, sizeof(pdu));
 }
 
+void forwardValRemove(int fd, struct VAL_REMOVE_PDU pdu) {
+    write(fd, (uint8_t*)&pdu, sizeof(pdu));
+}
+
 void forwardNetJoin(int fd, struct NET_JOIN_PDU pdu, uint8_t span, struct CONNECTION tcp) {
     pdu.src_port = htons(pdu.src_port);
     pdu.max_port = htons(pdu.max_port);
@@ -146,4 +168,9 @@ void forwardNetJoin(int fd, struct NET_JOIN_PDU pdu, uint8_t span, struct CONNEC
     }
 
     write(fd, (uint8_t*)&pdu, sizeof(pdu));
+}
+
+void addToBuffer(uint8_t* buffer, size_t* buffSize, uint8_t* input, size_t len) {
+    memcpy(&buffer[*buffSize], input, len);
+    *buffSize += len;
 }

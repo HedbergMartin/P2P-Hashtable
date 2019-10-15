@@ -320,14 +320,11 @@ bool handleValInsert(struct NODE_INFO* node) {
 
 bool handleValLookup(struct NODE_INFO* node) {
     struct VAL_LOOKUP_PDU pdu;
-    printf("Var\n");
     bool read = PDUparseValLookup(node->buffer, &(node->buffLen), &pdu);
     if (read) {
         int index = hash_ssn(pdu.ssn) % 255;
-        printf("Krashar\n");
         if (inRange(node, index)) {
             
-            printf("du\n");
             struct table_entry* entry = table_lookup(node->table, pdu.ssn);
             struct CONNECTION to;
             memcpy(to.address, pdu.sender_address, ADDRESS_LENGTH);
@@ -335,7 +332,7 @@ bool handleValLookup(struct NODE_INFO* node) {
             if (entry) {
                 sendValLookupResp(node->fds[AGENT_FD].fd, to, pdu.ssn, entry->name, entry->email);
             } else {
-                sendValLookupResp(node->fds[AGENT_FD].fd, to, pdu.ssn, NULL, NULL);
+                sendValLookupResp(node->fds[AGENT_FD].fd, to, pdu.ssn, "", "");
             }
             
         } else {
@@ -350,7 +347,12 @@ bool handleValRemove(struct NODE_INFO* node) {
     struct VAL_REMOVE_PDU pdu;
     bool read = PDUparseValRemove(node->buffer, &(node->buffLen), &pdu);
     if (read) {
-
+        int index = hash_ssn((char*)pdu.ssn) % 255;
+        if (inRange(node, index)) {
+            table_remove(node->table, (char*)pdu.ssn);
+        } else {
+            forwardValRemove(node->fds[TCP_SEND_FD].fd, pdu);
+        }
     }
     return read;
 }
