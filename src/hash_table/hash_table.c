@@ -12,6 +12,7 @@
 
 struct hash_table* table_create(hash_function* hash_func, uint32_t max_size) {
     struct hash_table* table = calloc(sizeof(struct hash_table), 1);
+    table->num_entries = 0;
     table->max_entries = max_size;
     table->entries = calloc(sizeof(struct table_entry*), max_size);
     table->hash_func = hash_func;
@@ -37,7 +38,6 @@ void table_insert(struct hash_table* table, char* ssn, char* name, char* email) 
                 } else {
                     table->entries[hash] = entry;
                 }
-
                 return;
             } 
 
@@ -50,6 +50,7 @@ void table_insert(struct hash_table* table, char* ssn, char* name, char* email) 
     } else {
         table->entries[hash] = entry;
     }
+    table->num_entries++;
 }
 
 void table_remove(struct hash_table* table, char* ssn) {
@@ -65,6 +66,7 @@ void table_remove(struct hash_table* table, char* ssn) {
             }
 
             entry_free(entry);
+            table->num_entries--;
 
             return;
         }
@@ -84,7 +86,6 @@ struct table_entry* table_lookup(struct hash_table* table, char* ssn){
 
         entry = entry->next;
     }
-
     return NULL;
 }
 
@@ -123,6 +124,10 @@ struct table_entry* get_entry_iterator(struct hash_table* table) {
 
     i = 0;
     return NULL;
+}
+
+int table_get_nr_entries(struct hash_table* table) {
+    return table->num_entries;
 }
 
 void entry_free(struct table_entry* e) {

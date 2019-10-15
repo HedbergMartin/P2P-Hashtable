@@ -7,6 +7,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
+#include <signal.h>
 
 #include "headers/node.h"
 #include "headers/pdu_parser.h"
@@ -14,6 +15,7 @@
 #include "headers/pdu.h"
 #include "headers/hash.h"
 #include "headers/hash_table.h"
+#include "headers/sighant.h"
 
 
 struct NODE_INFO {
@@ -37,6 +39,7 @@ int main(const int argc, const char** argv) {
     if (!initNode(&node, argc, argv)) {
         return -1;
     }
+	// signalHandler(SIGINT, terminate);
     runNode(&node);
     return 0;
 }
@@ -56,12 +59,11 @@ void runNode(struct NODE_INFO *node) {
 
 void handleInstreams(struct NODE_INFO* node) {
     uint8_t nrCheck = 4;
-    if (node->fds[TCP_RECEIVE_FD].fd != -1) {
+    if (node->fds[TCP_RECEIVE_FD].fd != -1 || node->fds[TCP_SEND_FD].fd != -1) {
         nrCheck = 6;
     }
     int pollret = poll(node->fds, nrCheck, 5000);
     
-    printf("Updating\n");
     if (pollret > 0) {
         for (int i = 0; i < nrCheck; i++) {
             if (node->fds[i].revents & POLLIN) {
@@ -189,13 +191,7 @@ bool handleNetCloseConnection(struct NODE_INFO* node) {
     struct NET_CLOSE_CONNECTION_PDU pdu;
     bool read = PDUparseNetCloseConnection(node->buffer, &(node->buffLen), &pdu);
     if (read) {
-        if (node->fds[TCP_RECEIVE_FD].fd == node->fds[TCP_SEND_FD].fd) { // TODO get this working :/
-            fprintf(stderr, "What the shit!?\n");
-            if (close(node->fds[TCP_SEND_FD].fd) < 0) {
-                perror("Closing TCP_SEND_FD\n");
-            }
-            node->fds[TCP_SEND_FD].fd = -1;
-        }
+        fprintf(stderr, "handleNetCloseConnection - Closing TCP_RECEIVE_FD\n");
         if (close(node->fds[TCP_RECEIVE_FD].fd) < 0) {
             perror("Closing TCP_RECEIVE_FD");
         }
@@ -285,10 +281,10 @@ void divideHashTable(struct NODE_INFO* node) {
     while ((e = get_entry_iterator(node->table)) != NULL) {
         int index = hash_ssn(e->ssn) % 255;
         if (inRange(node, index)) {
-            fprintf(stderr, "Sneding\n");
+            fprintf(stderr, "Inserting\n");
             table_insert(t, e->ssn, e->name, e->email);
         } else {
-            fprintf(stderr, "Insnerting\n");
+            fprintf(stderr, "Sneding\n");
             sendValInsert(node->fds[TCP_SEND_FD].fd, e->ssn, e->name, e->email);
         }
     }
@@ -361,11 +357,16 @@ bool handleValRemove(struct NODE_INFO* node) {
 
 bool handleNetNewRange(struct NODE_INFO* node) {
     struct NET_NEW_RANGE_PDU pdu;
-    fprintf(stderr, "Got NET_NEW_RANGE_PDU:");
-    fprintf(stderr, "New max: %d\n\n", pdu.new_range_end);
+    fprintf(stderr, "Got NET_NEW_RANGE_PDU - ");
+    fprintf(stderr, "new max: %d\n\n", pdu.new_range_end);
     bool read = PDUparseNetNewRange(node->buffer, &(node->buffLen), &pdu);
     if (read) {
-        node->range_end = pdu.new_range_end;
+        if (node->range_end < pdu.new_range_end) {
+            node->range_end = pdu.new_range_end;
+        } else {
+            fprintf(stderr, "Nah, range was bad: YEET\n");
+            sendNetNewRange(node->fds[TCP_RECEIVE_FD].fd, pdu.new_range_end);
+        }
     }
 
     return read;
@@ -375,17 +376,16 @@ bool handleNetLeaving(struct NODE_INFO* node) {
     struct NET_LEAVING_PDU pdu;
     bool read = PDUparseNetLeaving(node->buffer, &(node->buffLen), &pdu);
     if (read) {
-        fprintf(stderr, "Got NET_LEAVING_PDU");
-        fprintf(stderr, "New node %s:%d", pdu.next_address, pdu.next_port);
+        fprintf(stderr, "Got NET_LEAVING_PDU\n");
+        fprintf(stderr, "My node %s:%d\n", node->nodeConnection.address, node->nodeConnection.port);
+        fprintf(stderr, "New node %s:%d\n", pdu.next_address, pdu.next_port);
+        fprintf(stderr, "Nodes equals: %d\n", strncmp(node->nodeConnection.address, pdu.next_address, ADDRESS_LENGTH));
         if (close(node->fds[TCP_SEND_FD].fd) < 0) {
             perror("Closing TCP_SEND_FD");
         }
         node->fds[TCP_SEND_FD].fd = -1;
-        if (pdu.next_port == node->nodeConnection.port && strncmp(node->nodeConnection.address, pdu.next_address, ADDRESS_LENGTH)) {
-            node->fds[TCP_RECEIVE_FD].fd = -1;
-        } else {
+        if (pdu.next_port != node->nodeConnection.port && strncmp(node->nodeConnection.address, pdu.next_address, ADDRESS_LENGTH) != 0) {
             connectToNode(node, pdu.next_address, pdu.next_port);
-            divideHashTable(node);
         }
     }
 
@@ -454,7 +454,8 @@ uint8_t getRange(struct NODE_INFO* node) {
 }
 
 bool inRange(struct NODE_INFO* node, uint8_t index) {
-    return index >= node->range_start && index <= node->range_end;
+    fprintf(stderr, "In range? Node range: %d-%d. Index %d\n", node->range_start, node->range_end, index);
+    return index >= node->range_start && index <= node->range_end && getRange(node) > 0;
 }
 
 void setNewNodeRanges(uint8_t *pre_min, uint8_t* pre_max, uint8_t* succ_min, uint8_t* succ_max) {
@@ -524,30 +525,75 @@ void handle_stdin(struct NODE_INFO* node) {
     fgets(buff, 255, stdin);
     *strchr(buff, '\n') = 0;
     
-    if(strcmp(buff, "exit") == 0) {
-
-        nodeTerminate(node);
-    } else if (strcmp(buff, "range") == 0) {
+    if(strncmp(buff, "exit", 4) == 0) {
+        terminate(node);
+    } else if (strncmp(buff, "ports", 5) == 0) {
+        printf("\t--------------------\n");
+        printf("UDP port: %d\nTCP port: %d\nAgent port: %d\n"
+            , node->responsePort, node->nodeConnection.port, node->agentPort);
+        printf("\t--------------------\n");
+    } else if (strncmp(buff, "status", 6) == 0) {
+        printf("\t--------------------\n");
+        printf("TCP Receive port: %s\n", node->fds[TCP_RECEIVE_FD].fd ? "Connected" : "Disconnected");
+        printf("TCP Send port: %s\n", node->fds[TCP_SEND_FD].fd ? "Connected" : "Disconnected");
         printf("Range: %d - %d\n", node->range_start, node->range_end);
+        printf("Hash table number of entries: %d\n", node->table == NULL ? 0 : table_get_nr_entries(node->table));
+        printf("\t--------------------\n");
     } else {
-        printf("Unknown command, valid commands are [range, exit]\n");
+        printf("Unknown command, valid commands are [ports, status, exit]\n");
     }
 }
 
-void nodeTerminate(struct NODE_INFO *node) {
-    if (node->nextNodeConnection.port != node->nodeConnection.port
-    || strncmp(node->nextNodeConnection.address, node->nextNodeConnection.address, ADDRESS_LENGTH) != 0) {
-        printf("SNEDINGSNEDINGSNEDING\n");
-        sendNetCloseConnection(node->fds[TCP_SEND_FD].fd);
+void terminate(struct NODE_INFO* node) {
+
+    if (getRange(node) < 255) {
         sendNetNewRange(node->fds[TCP_RECEIVE_FD].fd, node->range_end);
+        node->range_end = node->range_start;
+        if (node->table != NULL) {
+            divideHashTable(node);
+            table_free(node->table);
+        }
+        sendNetCloseConnection(node->fds[TCP_SEND_FD].fd);
         sendNetLeaving(node->fds[TCP_RECEIVE_FD].fd, node->nextNodeConnection);
     }
-    for (int i = TCP_RECEIVE_FD; i < TCP_SEND_FD; i++) {
-        close(node->fds[i].fd);
-    }
-    if (node->table != NULL) {
-        table_free(node->table);
+    for (int i = AGENT_FD; i < TCP_SEND_FD; i++) {
+        if (node->fds[i].fd > 0) {
+            if (close(node->fds[i].fd) < 0) {
+                perror("Error closing port\n");
+            } else {
+                printf("Succesfully closed TCP port\n");
+            }
+        } else {
+            printf("Port already closed\n");
+        }
     }
     printf("Goodbye!\n");
     exit(0);
 }
+
+// void terminate(int signo) {
+// 
+//     if (getRange(NODE) < 255) {
+//         sendNetNewRange(NODE->fds[TCP_RECEIVE_FD].fd, NODE->range_end);
+//         NODE->range_end = NODE->range_start;
+//         if (NODE->table != NULL) {
+//             divideHashTable(NODE);
+//             table_free(NODE->table);
+//         }
+//         sendNetCloseConnection(NODE->fds[TCP_SEND_FD].fd);
+//         sendNetLeaving(NODE->fds[TCP_RECEIVE_FD].fd, NODE->nextNodeConnection);
+//     }
+//     for (int i = AGENT_FD; i < TCP_SEND_FD; i++) {
+//         if (NODE->fds[i].fd > 0) {
+//             if (close(NODE->fds[i].fd) < 0) {
+//                 perror("Error closing port\n");
+//             } else {
+//                 printf("Succesfully closed TCP port\n");
+//             }
+//         } else {
+//             printf("Port already closed\n");
+//         }
+//     }
+//     printf("Goodbye! %d\n", signo);
+//     exit(signo);
+// }

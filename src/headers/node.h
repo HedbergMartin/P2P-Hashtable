@@ -19,6 +19,8 @@
 typedef struct NODE_INFO NODE_INFO;
 typedef struct CONNECTION CONNECTION;
 
+// static NODE_INFO* NODE;
+
 int createSocket(char* address, int port, int commType, int sockType);
 int createServerSocket(int port, int commType);
 void connectToNode(struct NODE_INFO* node, char* address, uint16_t port);
@@ -45,6 +47,7 @@ void runNode(struct NODE_INFO *node);
 void parseInStream(int fd, struct NODE_INFO* node);
 void handleInstreams(struct NODE_INFO* node);
 void handle_stdin(struct NODE_INFO* node);
-void nodeTerminate(struct NODE_INFO *node);
+void terminate(struct NODE_INFO* node);
+// void terminate(int signo);
 
 #endif

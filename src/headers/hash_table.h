@@ -67,6 +67,11 @@ void table_free(struct hash_table* table);
 struct table_entry* get_entry_iterator(struct hash_table* table);
 
 /**
+ * Gets the number of entries for the table.
+ */
+int table_get_nr_entries(struct hash_table* table);
+
+/**
  * Frees a table entry.
  */
 void entry_free(struct table_entry* e);
