@@ -1,6 +1,6 @@
 CC=gcc
 
-CFLAGS= -std=gnu11 -pedantic -Wall #-Wextra #-Werror -Wmissing-declarations -Wmissing-prototypes -Werror-implicit-function-declaration -Wreturn-type -Wparentheses -Wunused -Wold-style-definition -Wundef -Wshadow -Wstrict-prototypes -Wswitch-default -Wunreachable-code
+CFLAGS= -std=gnu11 -pedantic -Wall -Wextra -Werror -Wmissing-declarations -Wmissing-prototypes -Werror-implicit-function-declaration -Wreturn-type -Wparentheses -Wunused -Wold-style-definition -Wundef -Wshadow -Wstrict-prototypes -Wswitch-default -Wunreachable-code
 
 NODE_SRC=node.c
 PDU_HANDLER_SRC=pdu_handler.c

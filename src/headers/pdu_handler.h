@@ -3,8 +3,6 @@
 
 #include "pdu.h"
 
-typedef struct NODE_INFO NODE_INFO;
-
 bool handlePDU(struct NODE_INFO* node);
 bool handleNetGetNodeResponse(struct NODE_INFO* node);
 bool handleNetJoin(struct NODE_INFO* node);

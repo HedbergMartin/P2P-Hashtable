@@ -7,6 +7,10 @@
 
 #include "headers/pdu.h"
 #include "headers/pdu_handler.h"
+#include "headers/pdu_parser.h"
+#include "headers/pdu_sender.h"
+#include "headers/hash_table.h"
+#include "headers/hash.h"
 #include "headers/node.h"
 
 bool handlePDU(struct NODE_INFO* node) {
