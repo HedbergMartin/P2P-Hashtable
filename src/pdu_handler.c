@@ -175,7 +175,7 @@ bool handleNetLeaving(struct NODE_INFO* node) {
             perror("Closing TCP_SEND_FD");
         }
         node->fds[TCP_SEND_FD].fd = -1;
-        if (pdu.next_port != node->nodeConnection.port && strncmp(node->nodeConnection.address, pdu.next_address, ADDRESS_LENGTH) != 0) {
+        if (pdu.next_port != node->nodeConnection.port || strncmp(node->nodeConnection.address, pdu.next_address, ADDRESS_LENGTH) != 0) {
             connectToNode(node, pdu.next_address, pdu.next_port);
         }
     }

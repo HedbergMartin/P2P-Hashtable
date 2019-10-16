@@ -51,8 +51,6 @@ void handleInstreams(struct NODE_INFO* node) {
                     case STDIN_FD:
                         handle_stdin(node);
                         break;
-                    // case UDP_FD:
-                    //     break;
                      case AGENT_FD:
                         parseInStream(node->fds[i].fd, node);
                         break;
@@ -61,7 +59,6 @@ void handleInstreams(struct NODE_INFO* node) {
                         node->fds[TCP_RECEIVE_FD].fd = accept(node->fds[TCP_ACCEPT_FD].fd, NULL, NULL);
                         break;
                     default:
-                        // printf("RACAEINVG\n");
                         parseInStream(node->fds[i].fd, node);
                         break;
                 }
@@ -70,7 +67,7 @@ void handleInstreams(struct NODE_INFO* node) {
 
     } else if (pollret < 0) {
         perror("Poll error");
-        //TODO figure out poll error handling.
+        exit(0);
     }
 }
 
@@ -81,7 +78,6 @@ void parseInStream(int fd, struct NODE_INFO* node) {
         perror("Failed to read");
         return;
     } else if (len == 0) {
-        // TODO: decide what to do
         return;
     }
     node->buffLen += len;
@@ -147,7 +143,7 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
     node->fds[UDP_FD].fd = createServerSocket(0, SOCK_DGRAM);
     node->fds[UDP_FD].events = POLLIN;
 
-    node->fds[AGENT_FD].fd = createServerSocket(0, SOCK_DGRAM); // TODO: determine port
+    node->fds[AGENT_FD].fd = createServerSocket(0, SOCK_DGRAM);
     node->fds[AGENT_FD].events = POLLIN;
 
     node->fds[TCP_ACCEPT_FD].fd = createServerSocket(0, SOCK_STREAM);
@@ -172,7 +168,7 @@ int initNode(struct NODE_INFO *node, const int argc, const char **argv) {
             return 0;
         }
     }
-    if (listen(node->fds[TCP_ACCEPT_FD].fd, 100) < 0) { // TODO: Listen queue len?
+    if (listen(node->fds[TCP_ACCEPT_FD].fd, 100) < 0) {
         perror("Listen for connection");
         return 0;
     }
@@ -265,8 +261,8 @@ void handle_stdin(struct NODE_INFO* node) {
         printf("\t--------------------\n");
     } else if (strncmp(buff, "status", 6) == 0) {
         printf("\t--------------------\n");
-        printf("TCP Receive port: %s\n", node->fds[TCP_RECEIVE_FD].fd ? "Connected" : "Disconnected");
-        printf("TCP Send port: %s\n", node->fds[TCP_SEND_FD].fd ? "Connected" : "Disconnected");
+        printf("TCP Receive port: %s\n", node->fds[TCP_RECEIVE_FD].fd != -1 ? "Connected" : "Disconnected");
+        printf("TCP Send port: %s\n", node->fds[TCP_SEND_FD].fd != -1 ? "Connected" : "Disconnected");
         printf("Range: %d - %d\n", node->range_start, node->range_end);
         printf("Hash table number of entries: %d\n", node->table == NULL ? 0 : table_get_nr_entries(node->table));
         printf("\t--------------------\n");
