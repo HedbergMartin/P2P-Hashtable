@@ -35,15 +35,9 @@ void sendUDP(int fd, struct CONNECTION to, uint8_t* msg, uint32_t msg_len) {
     } while(sent != msg_len);
 }
 
-void sendNetCloseConnection(int fd) {
-    struct NET_CLOSE_CONNECTION_PDU pdu;
-    pdu.type = NET_CLOSE_CONNECTION;
-    write(fd, (uint8_t*)&pdu, sizeof(pdu));
-}
-
-void sendStunLookup(int fd, struct CONNECTION to, uint16_t port) {
-    struct STUN_LOOKUP_PDU pdu;
-    pdu.type = STUN_LOOKUP;
+void sendNetAlive(int fd, struct CONNECTION to, uint16_t port) {
+    struct NET_ALIVE_PDU pdu;
+    pdu.type = NET_ALIVE;
     pdu.port = htons(port);
 
     sendUDP(fd, to, (uint8_t*)&pdu, sizeof(pdu));
@@ -52,14 +46,6 @@ void sendStunLookup(int fd, struct CONNECTION to, uint16_t port) {
 void sendNetGetNode(int fd, struct CONNECTION to, uint16_t port) {
     struct NET_GET_NODE_PDU pdu;
     pdu.type = NET_GET_NODE;
-    pdu.port = htons(port);
-
-    sendUDP(fd, to, (uint8_t*)&pdu, sizeof(pdu));
-}
-
-void sendNetAlive(int fd, struct CONNECTION to, uint16_t port) {
-    struct NET_ALIVE_PDU pdu;
-    pdu.type = NET_ALIVE;
     pdu.port = htons(port);
 
     sendUDP(fd, to, (uint8_t*)&pdu, sizeof(pdu));
@@ -77,6 +63,18 @@ void sendNetJoin(int fd, struct CONNECTION to, struct CONNECTION src) {
     sendUDP(fd, to, (uint8_t*)&pdu, sizeof(pdu));    
 }
 
+void forwardNetJoin(int fd, struct NET_JOIN_PDU pdu, uint8_t span, struct CONNECTION tcp) {
+    pdu.src_port = htons(pdu.src_port);
+    pdu.max_port = htons(pdu.max_port);
+    if (pdu.max_span < span) {
+        memcpy(pdu.max_address, tcp.address, ADDRESS_LENGTH);
+        pdu.max_port = htons(tcp.port);
+        pdu.max_span = span;
+    }
+
+    write(fd, (uint8_t*)&pdu, sizeof(pdu));
+}
+
 void sendNetJoinResp(int fd, struct CONNECTION next, uint8_t range_start, uint8_t range_end) {
     struct NET_JOIN_RESPONSE_PDU pdu;
     pdu.type = NET_JOIN_RESPONSE;
@@ -84,6 +82,28 @@ void sendNetJoinResp(int fd, struct CONNECTION next, uint8_t range_start, uint8_
     pdu.next_port = htons(next.port);
     pdu.range_start = range_start;
     pdu.range_end = range_end;
+    write(fd, (uint8_t*)&pdu, sizeof(pdu));
+}
+
+void sendNetCloseConnection(int fd) {
+    struct NET_CLOSE_CONNECTION_PDU pdu;
+    pdu.type = NET_CLOSE_CONNECTION;
+    write(fd, (uint8_t*)&pdu, sizeof(pdu));
+}
+
+void sendNetNewRange(int fd, uint8_t new_range_end) {
+    struct NET_NEW_RANGE_PDU pdu;
+    pdu.new_range_end = new_range_end;
+    pdu.type = NET_NEW_RANGE;
+    fprintf(stderr, "Sending new range :%d\n", pdu.new_range_end);
+    write(fd, (uint8_t*)&pdu, sizeof(pdu));
+}
+
+void sendNetLeaving(int fd, struct CONNECTION next) {
+    struct NET_LEAVING_PDU pdu;
+    memcpy(pdu.next_address, next.address, ADDRESS_LENGTH);
+    pdu.next_port = ntohs(next.port);
+    pdu.type = NET_LEAVING;
     write(fd, (uint8_t*)&pdu, sizeof(pdu));
 }
 
@@ -140,22 +160,6 @@ void sendValLookupResp(int fd, struct CONNECTION to, char* ssn, char* name, char
     sendUDP(fd, to, buffer, pdusize);
 }
 
-void sendNetNewRange(int fd, uint8_t new_range_end) {
-    struct NET_NEW_RANGE_PDU pdu;
-    pdu.new_range_end = new_range_end;
-    pdu.type = NET_NEW_RANGE;
-    fprintf(stderr, "Sending new range :%d\n", pdu.new_range_end);
-    write(fd, (uint8_t*)&pdu, sizeof(pdu));
-}
-
-void sendNetLeaving(int fd, struct CONNECTION next) {
-    struct NET_LEAVING_PDU pdu;
-    memcpy(pdu.next_address, next.address, ADDRESS_LENGTH);
-    pdu.next_port = ntohs(next.port);
-    pdu.type = NET_LEAVING;
-    write(fd, (uint8_t*)&pdu, sizeof(pdu));
-}
-
 void forwardValLookup(int fd, struct VAL_LOOKUP_PDU pdu) {
     pdu.sender_port = htons(pdu.sender_port);
 
@@ -166,16 +170,12 @@ void forwardValRemove(int fd, struct VAL_REMOVE_PDU pdu) {
     write(fd, (uint8_t*)&pdu, sizeof(pdu));
 }
 
-void forwardNetJoin(int fd, struct NET_JOIN_PDU pdu, uint8_t span, struct CONNECTION tcp) {
-    pdu.src_port = htons(pdu.src_port);
-    pdu.max_port = htons(pdu.max_port);
-    if (pdu.max_span < span) {
-        memcpy(pdu.max_address, tcp.address, ADDRESS_LENGTH);
-        pdu.max_port = htons(tcp.port);
-        pdu.max_span = span;
-    }
+void sendStunLookup(int fd, struct CONNECTION to, uint16_t port) {
+    struct STUN_LOOKUP_PDU pdu;
+    pdu.type = STUN_LOOKUP;
+    pdu.port = htons(port);
 
-    write(fd, (uint8_t*)&pdu, sizeof(pdu));
+    sendUDP(fd, to, (uint8_t*)&pdu, sizeof(pdu));
 }
 
 void addToBuffer(uint8_t* buffer, size_t* buffSize, uint8_t* input, size_t len) {
