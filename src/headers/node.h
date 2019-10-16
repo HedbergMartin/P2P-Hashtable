@@ -1,12 +1,12 @@
 #ifndef __NODE__
 #define __NODE__
 
-#define STDIN_FD 0
-#define UDP_FD 1
-#define AGENT_FD 2
-#define TCP_ACCEPT_FD 3
-#define TCP_RECEIVE_FD 4
-#define TCP_SEND_FD 5
+#define TCP_RECEIVE_FD 0
+#define TCP_SEND_FD 1
+#define STDIN_FD 2
+#define UDP_FD 3
+#define AGENT_FD 4
+#define TCP_ACCEPT_FD 5
 
 #define SERVER_SOCK 0
 #define CLIENT_SOCK 1

@@ -38,14 +38,14 @@ void runNode(struct NODE_INFO *node) {
 }
 
 void handleInstreams(struct NODE_INFO* node) {
-    uint8_t nrCheck = 4;
+    uint8_t start = 2;
     if (node->fds[TCP_RECEIVE_FD].fd != -1 || node->fds[TCP_SEND_FD].fd != -1) {
-        nrCheck = 6;
+        start = 0;
     }
-    int pollret = poll(node->fds, nrCheck, 5000);
+    int pollret = poll(node->fds + start, 6-start, 5000);
     
     if (pollret > 0) {
-        for (int i = 0; i < nrCheck; i++) {
+        for (int i = start; i < 6; i++) {
             if (node->fds[i].revents & POLLIN) {
                 switch (i) {
                     case STDIN_FD:
@@ -86,7 +86,7 @@ void parseInStream(int fd, struct NODE_INFO* node) {
     while (readAgain) {
 #ifdef DEBUG
         fprintf(stderr, "Instream message len = %lu. Instream message: ", node->buffLen);
-        for (int i = 0; i < node->buffLen; i++) {
+        for (uint i = 0; i < node->buffLen; i++) {
             fprintf(stderr, "%c", (char) (node->buffer[i]));
         }
         fprintf(stderr, "\n");
