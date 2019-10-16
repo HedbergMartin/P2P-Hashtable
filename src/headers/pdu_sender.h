@@ -1,16 +1,15 @@
-#include <inttypes.h>
-#include "pdu.h"
+/* 
+ * Authours:    Buster Hultgren Wärn <busterw@cs.umu.se>
+ *              Martin Hedberg <c17mhg@cs.umu.se>
+ * Published:   2019-10-16
+ * 
+ * Sends PDU struct via either TCP or UDP.
+ */
 
 #ifndef __PDU_SENDER__
 #define __PDU_SENDER__
 
-struct CONNECTION {
-    char address[ADDRESS_LENGTH];
-    uint16_t port;
-};
-
-typedef struct NET_JOIN_PDU NET_JOIN_PDU;
-typedef struct table_entry table_entry;
+#include "pdu.h"
 
 /* 
  * Sends a message to the given address over UDP.

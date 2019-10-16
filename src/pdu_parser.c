@@ -1,10 +1,17 @@
+/* 
+ * Authours:    Buster Hultgren Wärn <busterw@cs.umu.se>
+ *              Martin Hedberg <c17mhg@cs.umu.se>
+ * Published:   2019-10-16
+ * 
+ * Reads a buffer containing some PDU and copies it to a PDU pointer.
+ */
+
 #include <unistd.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <arpa/inet.h>
 
-#include "headers/pdu_parser.h"
 #include "headers/pdu.h"
+#include "headers/pdu_parser.h"
 
 bool readToPDUStruct(uint8_t* buffer, size_t* buffLen, void* pdu, size_t size) {
     if (*buffLen >= size) {

@@ -13,31 +13,19 @@
 
 #define HASH_RANGE 255
 
+#include "pdu.h"
+#include "pdu_handler.h"
+
 // #define DEBUG
 // #define SHOW_PDU
 
-typedef struct NODE_INFO NODE_INFO;
-typedef struct CONNECTION CONNECTION;
-
-// static NODE_INFO* NODE;
-
 int createSocket(char* address, int port, int commType, int sockType);
 int createServerSocket(int port, int commType);
-void connectToNode(struct NODE_INFO* node, char* address, uint16_t port);
 uint16_t getSocketPort(int fd);
+void connectToNode(struct NODE_INFO* node, char* address, uint16_t port);
 
-bool handlePDU(struct NODE_INFO* node);
-bool handleStunResponse(struct NODE_INFO* node);
-bool handleNetCloseConnection(struct NODE_INFO* node);
-bool handleNetGetNodeResponse(struct NODE_INFO* node);
-bool handleNetJoinResponse(struct NODE_INFO* node);
-bool handleNetJoin(struct NODE_INFO* node);
+
 void divideHashTable(struct NODE_INFO* node);
-bool handleValInsert(struct NODE_INFO *node);
-bool handleValLookup(struct NODE_INFO* node);
-bool handleValRemove(struct NODE_INFO* node);
-bool handleNetNewRange(struct NODE_INFO* node);
-bool handleNetLeaving(struct NODE_INFO* node);
 
 uint8_t getRange(struct NODE_INFO* node);
 bool inRange(struct NODE_INFO* node, uint8_t index);
@@ -48,6 +36,5 @@ void parseInStream(int fd, struct NODE_INFO* node);
 void handleInstreams(struct NODE_INFO* node);
 void handle_stdin(struct NODE_INFO* node);
 void terminate(struct NODE_INFO* node);
-// void terminate(int signo);
 
 #endif

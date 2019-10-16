@@ -1,10 +1,18 @@
+/* 
+ * Authours:    Buster Hultgren Wärn <busterw@cs.umu.se>
+ *              Martin Hedberg <c17mhg@cs.umu.se>
+ * Published:   2019-10-16
+ * 
+ * Sends PDU struct via either TCP or UDP.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
 
+#include "headers/pdu.h"
 #include "headers/pdu_sender.h"
 #include "headers/hash_table.h"
 

@@ -23,6 +23,7 @@ void signalHandler (int signo, Sigfunc *sigFunc) {
 
 	struct sigaction act;
 	act.sa_handler = sigFunc;
+	act.sa_flags |= SA_RESTART;
 // #ifdef SA_RESTART
 // 	act.sa_flags |= SA_RESTART;
 // #endif

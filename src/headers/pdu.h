@@ -1,6 +1,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define ADDRESS_LENGTH 16
 #define SSN_LENGTH 13
@@ -27,6 +28,28 @@
 
 #ifndef PDU_DEF
 #define PDU_DEF
+
+#define BUFFER_SIZE 1024000
+
+struct NODE_INFO {
+    uint8_t buffer[BUFFER_SIZE];
+    size_t buffLen;
+    uint16_t responsePort;
+    uint16_t agentPort;
+    struct CONNECTION trackerConnection;
+    struct CONNECTION nodeConnection;
+    struct CONNECTION nextNodeConnection;
+    struct pollfd fds[6];
+    bool connected;
+    uint8_t range_start;
+    uint8_t range_end;
+    struct hash_table* table;
+};
+
+struct CONNECTION {
+    char address[ADDRESS_LENGTH];
+    uint16_t port;
+};
 
 struct NET_GET_NODE_RESPONSE_PDU {
     uint8_t type;
