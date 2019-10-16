@@ -30,14 +30,19 @@ bool PDUparseNetAlive(uint8_t* buffer, size_t* buffLen, struct NET_ALIVE_PDU* pd
     return read;
 }
 
-bool PDUparseNetCloseConnection(uint8_t* buffer, size_t* buffLen, struct NET_CLOSE_CONNECTION_PDU* pdu) {
-    return readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
-}
-
 bool PDUparseNetGetNodeResp(uint8_t* buffer, size_t* buffLen, struct NET_GET_NODE_RESPONSE_PDU* pdu) {
     bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
     if (read) {
         pdu->port = ntohs(pdu->port);
+    }
+    return read;
+}
+
+bool PDUparseNetJoin(uint8_t* buffer, size_t* buffLen, struct NET_JOIN_PDU* pdu) {
+    bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
+    if (read) {
+        pdu->src_port = ntohs(pdu->src_port);
+        pdu->max_port = ntohs(pdu->max_port);
     }
     return read;
 }
@@ -52,13 +57,8 @@ bool PDUparseNetJoinResp(uint8_t* buffer, size_t* buffLen, struct NET_JOIN_RESPO
     return read;
 }
 
-bool PDUparseNetJoin(uint8_t* buffer, size_t* buffLen, struct NET_JOIN_PDU* pdu) {
-    bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
-    if (read) {
-        pdu->src_port = ntohs(pdu->src_port);
-        pdu->max_port = ntohs(pdu->max_port);
-    }
-    return read;
+bool PDUparseNetCloseConnection(uint8_t* buffer, size_t* buffLen, struct NET_CLOSE_CONNECTION_PDU* pdu) {
+    return readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
 }
 
 bool PDUparseNetNewRange(uint8_t* buffer, size_t* buffLen, struct NET_NEW_RANGE_PDU* pdu) { 
