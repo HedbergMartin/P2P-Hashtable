@@ -90,7 +90,7 @@ struct table_entry* table_lookup(struct hash_table* table, char* ssn){
 }
 
 void table_free(struct hash_table* table) {
-    for(int i = 0; i < table->max_entries; i++) {
+    for(uint i = 0; i < table->max_entries; i++) {
         struct table_entry* entry = table->entries[i], *next; 
 
         while(entry) {
@@ -105,7 +105,7 @@ void table_free(struct hash_table* table) {
 }
 
 struct table_entry* get_entry_iterator(struct hash_table* table) {
-    static int i = 0;
+    static uint i = 0;
     static struct table_entry* e = NULL;
     
     for(; i < table->max_entries; i++) {

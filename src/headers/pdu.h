@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <poll.h>
 
 #define ADDRESS_LENGTH 16
 #define SSN_LENGTH 13
@@ -31,6 +32,11 @@
 
 #define BUFFER_SIZE 1024000
 
+struct CONNECTION {
+    char address[ADDRESS_LENGTH];
+    uint16_t port;
+};
+
 struct NODE_INFO {
     uint8_t buffer[BUFFER_SIZE];
     size_t buffLen;
@@ -44,11 +50,6 @@ struct NODE_INFO {
     uint8_t range_start;
     uint8_t range_end;
     struct hash_table* table;
-};
-
-struct CONNECTION {
-    char address[ADDRESS_LENGTH];
-    uint16_t port;
 };
 
 struct NET_GET_NODE_RESPONSE_PDU {

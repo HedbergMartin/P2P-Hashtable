@@ -24,7 +24,7 @@ void sendUDP(int fd, struct CONNECTION to, uint8_t* msg, uint32_t msg_len) {
     toSock.sin_port = htons(to.port);
     inet_aton(to.address, &(toSock.sin_addr));
 
-    uint32_t sent = 0;
+    ssize_t sent = 0;
     do {
         sent += sendto(fd, (char *) msg + sent, msg_len - sent, 0, (struct sockaddr*)&toSock, sizeof(toSock));
         if (sent < 0) {
