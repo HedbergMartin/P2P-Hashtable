@@ -117,6 +117,14 @@ void forwardValLookup(int fd, struct VAL_LOOKUP_PDU pdu);
 void forwardValRemove(int fd, struct VAL_REMOVE_PDU pdu);
 
 /* 
+ * Sends a stun lookup request to get public ip to the tracker through UDP.
+ * @param fd - The filedescritor to send through.
+ * @param to - CONNECTION struct with the address to the receiver.
+ * @param port - port for tracker to answer to.
+ */
+void sendStunLookup(int fd, struct CONNECTION to, uint16_t port);
+
+/* 
  * Helper function to easily build a buffer.
  * @param buffer - Buffer to store everything in.
  * @param buffSize - Size of the buffer, a pointer as this value will be updated.
