@@ -14,5 +14,6 @@ bool handleValInsert(struct NODE_INFO *node);
 bool handleValLookup(struct NODE_INFO* node);
 bool handleValRemove(struct NODE_INFO* node);
 bool handleStunResponse(struct NODE_INFO* node);
+bool handleFingerTable(struct NODE_INFO* node);
 
 #endif

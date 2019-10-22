@@ -73,7 +73,7 @@ void handleInstreams(struct NODE_INFO* node) {
 
 void parseInStream(int fd, struct NODE_INFO* node) {
 
-    ssize_t len = read(fd, node->buffer + node->buffLen, BUFFER_SIZE);
+    ssize_t len = read(fd, node->buffer + node->buffLen, 1024);
     if (len < 0) {
         perror("Failed to read");
         return;

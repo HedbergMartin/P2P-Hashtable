@@ -51,6 +51,9 @@ bool handlePDU(struct NODE_INFO* node) {
         case NET_LEAVING:
             read = handleNetLeaving(node);
             break;
+        case NET_FINGER_TABLE:
+            read = handleFingerTable(node);
+            break;
         default:
             break;
     }
@@ -258,6 +261,15 @@ bool handleStunResponse(struct NODE_INFO* node) {
     if (read) {
         memcpy(node->nodeConnection.address, pdu.address, ADDRESS_LENGTH);
         sendNetGetNode(node->fds[UDP_FD].fd, node->trackerConnection, node->responsePort);
+    }
+    return read;
+}
+
+bool handleFingerTable(struct NODE_INFO* node) {
+    struct NET_FINGER_TABLE pdu;
+    bool read = readToPDUStruct(node->buffer, &(node->buffLen), &pdu, sizeof(pdu));
+    if (read) {
+
     }
     return read;
 }

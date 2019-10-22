@@ -16,6 +16,7 @@
 
 #define NET_NEW_RANGE 6
 #define NET_LEAVING 7
+#define NET_FINGER_TABLE 8
 
 #define VAL_INSERT 100
 #define VAL_REMOVE 101
@@ -45,6 +46,7 @@ struct NODE_INFO {
     struct CONNECTION trackerConnection;
     struct CONNECTION nodeConnection;
     struct CONNECTION nextNodeConnection;
+    struct CONNECTION fingerTable[8];
     struct pollfd fds[6];
     bool connected;
     uint8_t range_start;
@@ -111,6 +113,29 @@ struct NET_LEAVING_PDU {
     char next_address[ADDRESS_LENGTH]; 
     uint8_t pad;
     uint16_t next_port;
+};
+
+struct NET_FINGER_TABLE_PDU {
+    uint8_t type;
+    uint8_t range_start;
+    uint8_t range_end;
+    uint8_t pad;
+    char range0_address[ADDRESS_LENGTH];
+    uint16_t range0_port;
+    char range1_address[ADDRESS_LENGTH];
+    uint16_t range1_port;
+    char range2_address[ADDRESS_LENGTH];
+    uint16_t range2_port;
+    char range3_address[ADDRESS_LENGTH];
+    uint16_t range3_port;
+    char range4_address[ADDRESS_LENGTH];
+    uint16_t range4_port;
+    char range5_address[ADDRESS_LENGTH];
+    uint16_t range5_port;
+    char range6_address[ADDRESS_LENGTH];
+    uint16_t range6_port;
+    char range7_address[ADDRESS_LENGTH];
+    uint16_t range7_port;
 };
 
 struct STUN_RESPONSE_PDU {
