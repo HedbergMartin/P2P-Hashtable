@@ -122,22 +122,7 @@ struct NET_FINGER_TABLE_PDU {
     uint8_t pad;
     char origin_address[ADDRESS_LENGTH];
     uint16_t origin_port;
-    char range0_address[ADDRESS_LENGTH];
-    uint16_t range0_port;
-    char range1_address[ADDRESS_LENGTH];
-    uint16_t range1_port;
-    char range2_address[ADDRESS_LENGTH];
-    uint16_t range2_port;
-    char range3_address[ADDRESS_LENGTH];
-    uint16_t range3_port;
-    char range4_address[ADDRESS_LENGTH];
-    uint16_t range4_port;
-    char range5_address[ADDRESS_LENGTH];
-    uint16_t range5_port;
-    char range6_address[ADDRESS_LENGTH];
-    uint16_t range6_port;
-    char range7_address[ADDRESS_LENGTH];
-    uint16_t range7_port;
+    struct CONNECTION ranges[8];
 };
 
 struct STUN_RESPONSE_PDU {

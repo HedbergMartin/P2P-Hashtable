@@ -124,7 +124,7 @@ bool PDUparseValRemove(uint8_t* buffer, size_t* buffLen, struct VAL_REMOVE_PDU* 
     return read;
 }
 
-bool PDUparseNetFingerTable(uint8_t* buffer, size_t* buffLen, struct NET_FINGER_TABLE* pdu) {
+bool PDUparseNetFingerTable(uint8_t* buffer, size_t* buffLen, struct NET_FINGER_TABLE_PDU* pdu) {
     bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
     if (read) {
         //Ntohs if same node

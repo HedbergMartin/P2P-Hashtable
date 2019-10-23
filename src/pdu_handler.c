@@ -266,7 +266,7 @@ bool handleStunResponse(struct NODE_INFO* node) {
 }
 
 bool handleFingerTable(struct NODE_INFO* node) {
-    struct NET_FINGER_TABLE pdu;
+    struct NET_FINGER_TABLE_PDU pdu;
     bool read = readToPDUStruct(node->buffer, &(node->buffLen), &pdu, sizeof(pdu));
     if (read) {
 
