@@ -170,6 +170,25 @@ void forwardValRemove(int fd, struct VAL_REMOVE_PDU pdu) {
     write(fd, (uint8_t*)&pdu, sizeof(pdu));
 }
 
+void forwardNetFingerTable(int fd, struct NET_FINGER_TABLE_PDU pdu) {
+    pdu.origin.port = htons(pdu.origin.port);
+    for (int i = 0; i < 8; i++) {
+        pdu.ranges[i].port = htons(pdu.ranges[i].port);
+    }
+    write(fd, (uint8_t*)&pdu, sizeof(pdu));
+}
+
+void sendNetFingerTable(int fd, char* originAddress, uint16_t agentPort, uint8_t range_start, uint8_t range_end) {
+    struct NET_FINGER_TABLE_PDU pdu;
+    pdu.type = NET_FINGER_TABLE;
+    pdu.range_start = range_start;
+    pdu.range_end = range_end;
+    memcpy(pdu.origin.address, originAddress, ADDRESS_LENGTH);
+    pdu.origin.port = htons(agentPort);
+    
+    write(fd, (uint8_t*)&pdu, sizeof(pdu));
+}
+
 void sendStunLookup(int fd, struct CONNECTION to, uint16_t port) {
     struct STUN_LOOKUP_PDU pdu;
     pdu.type = STUN_LOOKUP;

@@ -266,6 +266,13 @@ void handle_stdin(struct NODE_INFO* node) {
         printf("Range: %d - %d\n", node->range_start, node->range_end);
         printf("Hash table number of entries: %d\n", node->table == NULL ? 0 : table_get_nr_entries(node->table));
         printf("\t--------------------\n");
+    } else if (strncmp(buff, "finger", 6) == 0) {
+        printf("\t--------------------\n");
+        for (int i = 0; i < 8; i++) {
+            int entry = (node->range_end + powerOf(2, i)) % 256;
+            printf("Value: %d: Address: %s : %d\n", entry, node->fingerTable[i].address, node->fingerTable[i].port);
+        }
+        printf("\t--------------------\n");
     } else {
         printf("Unknown command, valid commands are [ports, status, exit]\n");
     }
@@ -296,4 +303,13 @@ void terminate(struct NODE_INFO* node) {
     }
     printf("Goodbye!\n");
     exit(0);
+}
+
+int powerOf(int base, int exponent) {
+	int Exponentiation = 1;
+	for (int i = 0; i < exponent; i++) {
+		Exponentiation *= base;
+	}
+
+	return Exponentiation;
 }

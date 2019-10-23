@@ -127,7 +127,10 @@ bool PDUparseValRemove(uint8_t* buffer, size_t* buffLen, struct VAL_REMOVE_PDU* 
 bool PDUparseNetFingerTable(uint8_t* buffer, size_t* buffLen, struct NET_FINGER_TABLE_PDU* pdu) {
     bool read = readToPDUStruct(buffer, buffLen, pdu, sizeof(*pdu));
     if (read) {
-        //Ntohs if same node
+        pdu->origin.port = ntohs(pdu->origin.port);
+        for (int i = 0; i < 8; i++) {
+            pdu->ranges[i].port = ntohs(pdu->ranges[i].port);
+        }
     }
     return read;
 }

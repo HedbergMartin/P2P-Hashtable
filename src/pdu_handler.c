@@ -132,6 +132,7 @@ bool handleNetJoinResponse(struct NODE_INFO* node) {
         node->range_start = pdu.range_start;
         node->range_end = pdu.range_end;
         node->table = table_create(hash_ssn, getRange(node));
+        sendNetFingerTable(node->fds[TCP_SEND_FD].fd, node->nodeConnection.address, node->agentPort, node->range_start, node->range_end);
     }
     return read;
 }
@@ -269,7 +270,27 @@ bool handleFingerTable(struct NODE_INFO* node) {
     struct NET_FINGER_TABLE_PDU pdu;
     bool read = readToPDUStruct(node->buffer, &(node->buffLen), &pdu, sizeof(pdu));
     if (read) {
+        if (pdu.origin.port == node->agentPort && strncmp(pdu.origin.address, node->nodeConnection.address, ADDRESS_LENGTH) == 0) {
+            memcpy(node->fingerTable, pdu.ranges, sizeof(pdu.ranges));
+        } else {
+            for (int i = 0; i < 8; i++) {
+                int entry = (pdu.range_end + powerOf(2, i)) % 256;
 
+                if (entry >= node->range_start && entry < node->range_end) {
+                    memcpy(pdu.ranges[i].address, node->nodeConnection.address, ADDRESS_LENGTH);
+                    pdu.ranges[i].port = node->agentPort;
+                }
+
+                int myEntry = (node->range_end + powerOf(2, i)) % 256;
+
+                if (myEntry >= pdu.range_start && myEntry < pdu.range_end) {
+                    memcpy(node->fingerTable[i].address, pdu.ranges[i].address, ADDRESS_LENGTH);
+                    node->fingerTable[i].port = pdu.ranges[i].port;
+                }
+            }
+
+            forwardNetFingerTable(node->fds[TCP_SEND_FD].fd, pdu);
+        }
     }
     return read;
 }

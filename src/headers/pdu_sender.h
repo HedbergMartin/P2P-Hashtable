@@ -116,6 +116,9 @@ void forwardValLookup(int fd, struct VAL_LOOKUP_PDU pdu);
  */
 void forwardValRemove(int fd, struct VAL_REMOVE_PDU pdu);
 
+void forwardNetFingerTable(int fd, struct NET_FINGER_TABLE_PDU pdu);
+void sendNetFingerTable(int fd, char* originAddress, uint16_t agentPort, uint8_t range_start, uint8_t range_end);
+
 /* 
  * Sends a stun lookup request to get public ip to the tracker through UDP.
  * @param fd - The filedescritor to send through.

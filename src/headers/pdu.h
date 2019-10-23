@@ -120,8 +120,7 @@ struct NET_FINGER_TABLE_PDU {
     uint8_t range_start;
     uint8_t range_end;
     uint8_t pad;
-    char origin_address[ADDRESS_LENGTH];
-    uint16_t origin_port;
+    struct CONNECTION origin;
     struct CONNECTION ranges[8];
 };
 

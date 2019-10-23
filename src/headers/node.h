@@ -37,4 +37,13 @@ void handleInstreams(struct NODE_INFO* node);
 void handle_stdin(struct NODE_INFO* node);
 void terminate(struct NODE_INFO* node);
 
+
+/* SUPPORT FUNCTION FOR BITSTRING
+* description: Computes the a exponentiation of integers.
+* param[in]: base - Base of the Exponentiation.
+* param[in]: expontent - Expontent of the Exponentiation.
+* return: The Exponentiation as an integer.
+*/
+int powerOf (int base, int exponent);
+
 #endif
