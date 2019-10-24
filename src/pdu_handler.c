@@ -202,6 +202,7 @@ bool handleValInsert(struct NODE_INFO* node) {
             table_insert(node->table, (char *)pdu.ssn, (char *)pdu.name, (char *)pdu.email);
         } else {
             fprintf(stderr, "Forwarding");
+            
             sendValInsert(node->fds[TCP_SEND_FD].fd, (char *)pdu.ssn, (char *)pdu.name, (char *)pdu.email);
         }
 
@@ -231,8 +232,8 @@ bool handleValLookup(struct NODE_INFO* node) {
             }
             
         } else {
-            
-            forwardValLookup(node->fds[TCP_SEND_FD].fd, pdu);
+            struct CONNECTION to = nodeGetConnectionFromFingerTable(node, index);
+            forwardValLookup(node->fds[TCP_SEND_FD].fd, to, pdu);
         }
     }
     return read;
@@ -267,25 +268,32 @@ bool handleStunResponse(struct NODE_INFO* node) {
 }
 
 bool handleFingerTable(struct NODE_INFO* node) {
+
+
     struct NET_FINGER_TABLE_PDU pdu;
-    bool read = readToPDUStruct(node->buffer, &(node->buffLen), &pdu, sizeof(pdu));
+    bool read = PDUparseNetFingerTable(node->buffer, &(node->buffLen), &pdu);
     if (read) {
+        fprintf(stderr, "\nIncoming PDU: %s : %d\n", pdu.origin.address, pdu.origin.port);
         if (pdu.origin.port == node->agentPort && strncmp(pdu.origin.address, node->nodeConnection.address, ADDRESS_LENGTH) == 0) {
+            fprintf(stderr, "My fingertable came back! =)\n");
             memcpy(node->fingerTable, pdu.ranges, sizeof(pdu.ranges));
         } else {
+            fprintf(stderr, "My range: %d-%d. PDU range: %d-%d\n", node->range_start, node->range_end, pdu.range_start, pdu.range_end);
             for (int i = 0; i < 8; i++) {
                 int entry = (pdu.range_end + powerOf(2, i)) % 256;
-
-                if (entry >= node->range_start && entry < node->range_end) {
+                int myEntry = (node->range_end + powerOf(2, i)) % 256;
+                fprintf(stderr, "Entry: %d -> %d\t\tMy entry: %d -> %d\n", pdu.range_end, entry, node->range_end, myEntry);
+                if (entry >= node->range_start && entry <= node->range_end) {
+                    fprintf(stderr, "Inserting %d into PDU. PDU range: %d-%d\n", entry, pdu.range_start, pdu.range_end);
                     memcpy(pdu.ranges[i].address, node->nodeConnection.address, ADDRESS_LENGTH);
                     pdu.ranges[i].port = node->agentPort;
                 }
 
-                int myEntry = (node->range_end + powerOf(2, i)) % 256;
 
-                if (myEntry >= pdu.range_start && myEntry < pdu.range_end) {
-                    memcpy(node->fingerTable[i].address, pdu.ranges[i].address, ADDRESS_LENGTH);
-                    node->fingerTable[i].port = pdu.ranges[i].port;
+                if (myEntry >= pdu.range_start && myEntry <= pdu.range_end) {
+                    memcpy(node->fingerTable[i].address, pdu.origin.address, ADDRESS_LENGTH);
+                    node->fingerTable[i].port = pdu.origin.port;
+                    fprintf(stderr, "Inserting %d into fingerTable. My range: %d-%d. New port: %d\n", myEntry, node->range_start, node->range_end, node->fingerTable[i].port);
                 }
             }
 

@@ -84,18 +84,18 @@ void sendNetNewRange(int fd, uint8_t new_range_end);
 void sendNetLeaving(int fd, struct CONNECTION next);
 
 /* 
- * Sends a val insert to the next node over TCP.
+ * Sends a val insert to the next node from fingertable via UDP.
  * @param fd - The filedescritor to send through.
  * @param ssn - Social security number to add to table.
  * @param name - Name to add to table.
  * @param email - Email to add to table.
  */
-void sendValInsert(int fd, char* ssn, char* name, char* email);
+void sendValInsert(int fd, struct CONNECTION to, char* ssn, char* name, char* email);
 
 /* 
  * Sends a response to the agents request of val lookup.
  * @param fd - The filedescritor to send through.
- * @param to - CONNECTION struct with the address to the next agent.
+ * @param to - CONNECTION struct with the address and port to the next agent.
  * @param ssn - Social security number to add to table.
  * @param name - Name to add to table.
  * @param email - Email to add to table.
@@ -103,20 +103,35 @@ void sendValInsert(int fd, char* ssn, char* name, char* email);
 void sendValLookupResp(int fd, struct CONNECTION to, char* ssn, char* name, char* email);
 
 /* 
- * Forwards a val lookup request to the next node.
- * @param fd - The filedescritor to send through.
+ * Forwards a val lookup request to the next node from fingertable via UDP.
+ * @param fd - The UDP filedescritor to send through.
+ * @param to - CONNECTION struct with the address and port to node.
  * @param pdu - PDU to be forwarded.
  */
-void forwardValLookup(int fd, struct VAL_LOOKUP_PDU pdu);
+void forwardValLookup(int fd, struct CONNECTION to, struct VAL_LOOKUP_PDU pdu);
 
 /* 
- * Forward val remove.
+ * Forward val remove to next node from fingertable via UDP.
  * @param fd - The filedescritor to send through.
+ * @param to - CONNECTION struct with the address and port to node.
  * @param pdu - PDU to be forwarded.
  */
-void forwardValRemove(int fd, struct VAL_REMOVE_PDU pdu);
+void forwardValRemove(int fd, struct CONNECTION to, struct VAL_REMOVE_PDU pdu);
 
+/* 
+ * TODO: fill
+ * @param fd - The filedescritor to send through.
+ * @param to - CONNECTION struct with the address and port to node.
+ * @param pdu - PDU to be forwarded.
+ */
 void forwardNetFingerTable(int fd, struct NET_FINGER_TABLE_PDU pdu);
+
+/* 
+ * TODO: FILL COMMECNTS
+ * @param fd - The filedescritor to send through.
+ * @param to - CONNECTION struct with the address and port to node.
+ * @param pdu - PDU to be forwarded.
+ */
 void sendNetFingerTable(int fd, char* originAddress, uint16_t agentPort, uint8_t range_start, uint8_t range_end);
 
 /* 

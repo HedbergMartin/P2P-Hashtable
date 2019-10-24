@@ -107,7 +107,34 @@ void sendNetLeaving(int fd, struct CONNECTION next) {
     write(fd, (uint8_t*)&pdu, sizeof(pdu));
 }
 
-void sendValInsert(int fd, char* ssn, char* name, char* email) {
+// void sendValInsert(int fd, char* ssn, char* name, char* email) {
+//     struct VAL_INSERT_PDU pdu;
+//     pdu.type = VAL_INSERT;
+//     pdu.email = (uint8_t *) email;
+//     pdu.email_length = strlen(email) + 1;
+//     pdu.name = (uint8_t *) name;
+//     pdu.name_length = strlen(name) + 1;
+//     memcpy(pdu.ssn, ssn, SSN_LENGTH);
+// 
+//     size_t pdusize = sizeof(pdu) + pdu.email_length - 8 + pdu.name_length - 8; //-8 for the pointer sizes
+// 
+//     uint8_t buffer[pdusize];
+//     size_t buffSize = 0;
+//     
+//     addToBuffer(buffer, &buffSize, (uint8_t*)&pdu, 16);
+//     addToBuffer(buffer, &buffSize, pdu.name, pdu.name_length);
+//     addToBuffer(buffer, &buffSize, &pdu.email_length, 1);
+//     addToBuffer(buffer, &buffSize, pdu.PAD2, 7);
+//     addToBuffer(buffer, &buffSize, pdu.email, pdu.email_length);
+// 
+//     if (buffSize != pdusize) {
+//         fprintf(stderr, "ERROR SIZE NOT MATCH!!!!\n");
+//     }
+// 
+//     write(fd, buffer, pdusize);
+// }
+
+void sendValInsert(int fd, struct CONNECTION to, char* ssn, char* name, char* email) {
     struct VAL_INSERT_PDU pdu;
     pdu.type = VAL_INSERT;
     pdu.email = (uint8_t *) email;
@@ -131,7 +158,7 @@ void sendValInsert(int fd, char* ssn, char* name, char* email) {
         fprintf(stderr, "ERROR SIZE NOT MATCH!!!!\n");
     }
 
-    write(fd, buffer, pdusize);
+    sendUDP(fd, to, buffer, pdusize);
 }
 
 void sendValLookupResp(int fd, struct CONNECTION to, char* ssn, char* name, char* email) {
@@ -160,21 +187,14 @@ void sendValLookupResp(int fd, struct CONNECTION to, char* ssn, char* name, char
     sendUDP(fd, to, buffer, pdusize);
 }
 
-void forwardValLookup(int fd, struct VAL_LOOKUP_PDU pdu) {
+void forwardValLookup(int fd, struct CONNECTION to, struct VAL_LOOKUP_PDU pdu) {
     pdu.sender_port = htons(pdu.sender_port);
 
-    write(fd, (uint8_t*)&pdu, sizeof(pdu));
+    sendUDP(fd, to, (uint8_t*)&pdu);
+    //write(fd, (uint8_t*)&pdu, sizeof(pdu));
 }
 
 void forwardValRemove(int fd, struct VAL_REMOVE_PDU pdu) {
-    write(fd, (uint8_t*)&pdu, sizeof(pdu));
-}
-
-void forwardNetFingerTable(int fd, struct NET_FINGER_TABLE_PDU pdu) {
-    pdu.origin.port = htons(pdu.origin.port);
-    for (int i = 0; i < 8; i++) {
-        pdu.ranges[i].port = htons(pdu.ranges[i].port);
-    }
     write(fd, (uint8_t*)&pdu, sizeof(pdu));
 }
 
@@ -186,6 +206,14 @@ void sendNetFingerTable(int fd, char* originAddress, uint16_t agentPort, uint8_t
     memcpy(pdu.origin.address, originAddress, ADDRESS_LENGTH);
     pdu.origin.port = htons(agentPort);
     
+    write(fd, (uint8_t*)&pdu, sizeof(pdu));
+}
+
+void forwardNetFingerTable(int fd, struct NET_FINGER_TABLE_PDU pdu) {
+    pdu.origin.port = htons(pdu.origin.port);
+    for (int i = 0; i < 8; i++) {
+        pdu.ranges[i].port = htons(pdu.ranges[i].port);
+    }
     write(fd, (uint8_t*)&pdu, sizeof(pdu));
 }
 

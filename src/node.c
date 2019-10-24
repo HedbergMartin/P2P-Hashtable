@@ -191,6 +191,20 @@ void setNewNodeRanges(uint8_t *pre_min, uint8_t* pre_max, uint8_t* succ_min, uin
     *succ_min = *pre_max + 1;
 }
 
+struct CONNECTION nodeGetConnectionFromFingerTable(struct NODE_INFO* node, int index) {
+    fprintf(stderr, "\nGetting connection with index %d\n", index);
+    struct CONNECTION to = node->fingerTable[7];
+    for (int i = 0; i < 8; i++) {
+        int bluh = (node->range_end + powerOf(2, i)) % 256;
+        fprintf(stderr, "i: %d. %d -> %d\n", i, node->range_end, bluh);
+        if (index >= bluh) {
+            fprintf(stderr, "This finger looks nice\n");
+            to = node->fingerTable[i];
+        }
+    }
+    return to;
+}
+
 int createSocket(char* address, int port, int commType, int sockType) {
     struct sockaddr_in in_addr;
     int insocket = socket(AF_INET, commType, 0);
